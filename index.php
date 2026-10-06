@@ -444,7 +444,6 @@ if ($pdo) {
                         <th>Tracker Progress</th>
                         <th>PMC Site & Signoff</th>
                         <th>QA Site & Signoff</th>
-                        <th>Signoff Approver</th>
                         <th>Due Date (14d)</th>
                         <th>WW / Year</th>
                         <th style="text-align:center;">Action</th>
@@ -453,7 +452,7 @@ if ($pdo) {
                 <tbody id="ecoTableBody">
                     <?php if (empty($records)): ?>
                         <tr>
-                            <td colspan="12">
+                            <td colspan="11">
                                 <div class="empty-state">
                                     <h4>No ECO records found</h4>
                                     <p>Click "Upload Agile Files" above to import SearchResult and User Signoff spreadsheets.</p>
@@ -516,8 +515,8 @@ if ($pdo) {
                             </td>
 
                             <!-- Subject -->
-                            <td style="max-width: 280px; white-space: normal; line-height: 1.35;">
-                                <div style="font-size:12.5px; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;" title="<?= h($r['subject']) ?>">
+                            <td class="subject-cell" title="Click to show or hide the full subject">
+                                <div class="subject-cell-text">
                                     <?= dash($r['subject']) ?>
                                 </div>
                             </td>
@@ -574,17 +573,6 @@ if ($pdo) {
                                 </button>
                             </td>
 
-                            <!-- Signoff Approver & Status -->
-                            <td>
-                                <div style="font-weight:600; font-size:12.5px;"><?= dash($r['signoff_user']) ?></div>
-                                <div style="font-size:11.5px; color:#64748b;">
-                                    <?= dash($r['signoff_status']) ?>
-                                    <?php if ($r['signoff_duration'] !== null): ?>
-                                        (<?= h($r['signoff_duration']) ?>h)
-                                    <?php endif; ?>
-                                </div>
-                            </td>
-
                             <!-- Due Date -->
                             <td>
                                 <?php if ($isOverdue): ?>
@@ -612,7 +600,7 @@ if ($pdo) {
 
                         <!-- Collapsible Detail Accordion Tray -->
                         <tr class="detail-row" id="detail-<?= $ecoNo ?>">
-                            <td colspan="12">
+                            <td colspan="11">
                                 <div class="detail-content">
                                     <!-- Section 1: Agile PLM Master Data -->
                                     <div class="detail-section">

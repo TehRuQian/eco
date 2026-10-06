@@ -140,6 +140,13 @@ document.addEventListener('DOMContentLoaded', function () {
     // -------------------------------------------------------------
     document.querySelectorAll('.expand-trigger').forEach(el => {
         el.addEventListener('click', function (e) {
+            const subjectCell = e.target.closest('.subject-cell');
+            if (subjectCell) {
+                e.stopPropagation();
+                subjectCell.classList.toggle('expanded');
+                return;
+            }
+
             // Do not toggle if clicked on button or link
             if (e.target.closest('button') || e.target.closest('a')) return;
 

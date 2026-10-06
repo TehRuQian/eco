@@ -366,6 +366,27 @@ table.eco-table td {
     vertical-align: middle;
 }
 
+.subject-cell {
+    max-width: 280px;
+    white-space: normal;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+    user-select: text;
+    cursor: pointer;
+}
+
+.subject-cell-text {
+    font-size: 12.5px;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
+}
+
+.subject-cell.expanded .subject-cell-text {
+    display: block;
+}
+
 tr.eco-row {
     transition: background 0.15s ease;
 }

@@ -12,7 +12,7 @@
  * 6. Thursday-based work week (WW) calculation
  * 7. Due date calculation (Originated Date + 14 calendar days)
  * 8. Status change detection (previous_internal_status vs internal_status)
- * 9. Unmatched signoff record retention
+ * 9. Skips signoff records without a matching ECO master record
  * 10. Manual tracking data preservation on re-import
  * 11. Transaction integrity (all-or-nothing rollback)
  */
@@ -857,6 +857,19 @@ class ECOProcessor
             // 2. Process Signoff Data
             if (!empty($signoffCols) && $stmtGetSignoff) {
                 foreach ($signoffData as $ecoNo => $s) {
+                    // eco_signoff.eco_no references eco_master.eco_no, so unmatched rows
+                    // cannot be stored while the foreign key constraint is enabled.
+                    $isMatched = isset($masterData[$ecoNo]);
+                    if (!$isMatched) {
+                        $stmtCheckMaster->execute([$ecoNo]);
+                        $isMatched = (bool)$stmtCheckMaster->fetchColumn();
+                    }
+
+                    if (!$isMatched) {
+                        $stats['unmatched_signoff']++;
+                        continue;
+                    }
+
                     $stmtGetSignoff->execute([$ecoNo]);
                     $prevRecord = $stmtGetSignoff->fetch();
 
@@ -880,18 +893,6 @@ class ECOProcessor
                         }
                     }
 
-                    // Check if this ECO exists in master
-                    $isMatched = isset($masterData[$ecoNo]);
-                    if (!$isMatched) {
-                        $stmtCheckMaster->execute([$ecoNo]);
-                        $isMatched = (bool)$stmtCheckMaster->fetchColumn();
-                    }
-
-                    $isUnmatched = $isMatched ? 0 : 1;
-                    if ($isUnmatched) {
-                        $stats['unmatched_signoff']++;
-                    }
-
                     $allSignFields = [
                         'eco_no'                   => $ecoNo,
                         'internal_status'          => $newStatus,
@@ -902,7 +903,7 @@ class ECOProcessor
                         'status_entry_date'        => $s['status_entry_date'],
                         'status_changed'           => $statusChanged,
                         'status_changed_at'        => $statusChangedAt,
-                        'is_unmatched'             => $isUnmatched,
+                        'is_unmatched'             => 0,
                     ];
 
                     $filteredSign = array_filter(
@@ -941,7 +942,7 @@ class ECOProcessor
                 'success' => true,
                 'stats'   => $stats,
                 'message' => sprintf(
-                    "Import successful! Master: %d inserted, %d updated. Tracking: %d new, %d preserved. Signoff: %d processed (%d changed, %d unmatched).",
+                    "Import successful! Master: %d inserted, %d updated. Tracking: %d new, %d preserved. Signoff: %d processed (%d changed, %d unmatched skipped).",
                     $stats['master_inserted'],
                     $stats['master_updated'],
                     $stats['tracking_created'],
