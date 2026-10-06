@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ECO Tracker Dashboard</title>
+<style>
+    * { box-sizing: border-box; }
+    body {
+        font-family: 'Segoe UI', Arial, sans-serif;
+        background: #f4f6f9;
+        margin: 0;
+        padding: 20px;
+        color: #333;
+    }
+    .container {
+        max-width: 1500px;
+        margin: 0 auto;
+        background: #fff;
+        border-radius: 10px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        padding: 25px;
+    }
+    .header-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 3px solid #1a73e8;
+        padding-bottom: 12px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    h1 { color: #1a3c6e; margin: 0; }
+    .btn {
+        padding: 10px 20px;
+        background: #1a73e8;
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: 0.2s;
+    }
+    .btn:hover { background: #0f5bc7; }
+    .btn-green { background: #1e8e3e; }
+    .btn-green:hover { background: #17752f; }
+    .btn:disabled { background: #ccc; cursor: not-allowed; }
+
+    .toolbar {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 20px;
+        align-items: center;
+    }
+    .toolbar input[type=text], .toolbar select {
+        padding: 8px 12px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        font-size: 14px;
+    }
+    .toolbar input[type=text] { flex: 1; min-width: 200px; }
+
+    .stats {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+    }
+    .stat-card {
+        background: linear-gradient(135deg, #1a73e8, #1a3c6e);
+        color: #fff;
+        padding: 15px 20px;
+        border-radius: 8px;
+        min-width: 150px;
+    }
+    .stat-card .num { font-size: 26px; font-weight: bold; }
+    .stat-card .label { font-size: 13px; opacity: 0.9; }
+    .stat-card.new { background: linear-gradient(135deg, #1e8e3e, #145c28); }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+    }
+    th, td {
+        border: 1px solid #e0e0e0;
+        padding: 8px 10px;
+        text-align: left;
+        vertical-align: top;
+        white-space: nowrap;
+    }
+    th {
+        background: #1a3c6e;
+        color: #fff;
+        position: sticky;
+        top: 0;
+        font-weight: 600;
+    }
+    tr:nth-child(even) { background: #f9fafc; }
+    tr:hover { background: #eef3fc; }
+    tr.new-row { background: #eafaf0 !important; }
+
+    .status-badge {
+        padding: 3px 10px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+        display: inline-block;
+    }
+    .status-complete { background: #d4edda; color: #1e7e34; }
+    .status-pending { background: #fff3cd; color: #856404; }
+    .status-progress { background: #cce5ff; color: #004085; }
+
+    .agile-closed { color: #1e7e34; font-weight: 700; }
+    .agile-open { color: #b8860b; font-weight: 700; }
+
+    .table-wrap {
+        overflow-x: auto;
+        max-height: 65vh;
+        overflow-y: auto;
+    }
+    .subject-cell { max-width: 350px; white-space: normal; }
+    .new-tag {
+        background: #1e8e3e;
+        color: #fff;
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        margin-left: 6px;
+        vertical-align: middle;
+    }
+
+    /* ---------- MODAL ---------- */
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.55);
+        z-index: 1000;
+        align-items: flex-start;
+        justify-content: center;
+        overflow-y: auto;
+        padding: 30px 15px;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal-box {
+        background: #f4f6f9;
+        border-radius: 10px;
+        max-width: 1150px;
+        width: 100%;
+        padding: 25px;
+        position: relative;
+    }
+    .modal-close {
+        position: absolute;
+        top: 12px;
+        right: 18px;
+        font-size: 22px;
+        color: #666;
+        cursor: pointer;
+        background: none;
+        border: none;
+    }
+    .modal-close:hover { color: #d93025; }
+
+    .stepper {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 25px;
+        position: relative;
+    }
+    .stepper::before {
+        content: '';
+        position: absolute;
+        top: 18px;
+        left: 5%;
+        right: 5%;
+        height: 3px;
+        background: #ddd;
+        z-index: 0;
+    }
+    .step { flex: 1; text-align: center; position: relative; z-index: 1; }
+    .step .circle {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: #ddd;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 6px;
+        font-weight: bold;
+        font-size: 14px;
+        transition: 0.3s;
+    }
+    .step.active .circle { background: #1a73e8; }
+    .step.done .circle { background: #1e8e3e; }
+    .step .label { font-size: 11px; color: #666; max-width: 90px; margin: 0 auto; }
+
+    .card {
+        background: #fff;
+        border-radius: 10px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        padding: 25px;
+    }
+    .card h2 {
+        margin-top: 0;
+        color: #1a3c6e;
+        font-size: 18px;
+        border-bottom: 2px solid #eef3fc;
+        padding-bottom: 10px;
+    }
+
+    .upload-boxes { display: flex; gap: 20px; flex-wrap: wrap; }
+    .upload-box {
+        flex: 1;
+        min-width: 250px;
+        border: 2px dashed #b0c4de;
+        border-radius: 10px;
+        padding: 25px;
+        text-align: center;
+        background: #f8fafd;
+        transition: 0.2s;
+    }
+    .upload-box.filled { border-color: #1e8e3e; background: #eafaf0; }
+    .upload-box input { display: none; }
+    .upload-box label {
+        cursor: pointer;
+        color: #1a73e8;
+        font-weight: 600;
+        display: block;
+        margin-top: 8px;
+    }
+    .upload-box .filename {
+        margin-top: 10px;
+        font-size: 13px;
+        color: #1e7e34;
+        font-weight: 600;
+        word-break: break-all;
+    }
+    .file-icon {
+        font-size: 13px;
+        font-weight: 700;
+        color: #1a73e8;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    .req-columns {
+        font-size: 12px;
+        color: #777;
+        margin-top: 10px;
+        text-align: left;
+        background: #fff;
+        border-radius: 6px;
+        padding: 8px 12px;
+        border: 1px solid #eee;
+    }
+
+    .actions-row {
+        margin-top: 20px;
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+    }
+
+    .log {
+        font-family: 'Consolas', monospace;
+        font-size: 13px;
+        background: #0d1117;
+        color: #c9d1d9;
+        border-radius: 8px;
+        padding: 15px;
+        max-height: 260px;
+        overflow-y: auto;
+        line-height: 1.6;
+    }
+    .log .ok { color: #3fb950; }
+    .log .warn { color: #d29922; }
+    .log .info { color: #58a6ff; }
+
+    .progress-wrap {
+        background: #eee;
+        border-radius: 20px;
+        height: 22px;
+        overflow: hidden;
+        margin: 15px 0;
+    }
+    .progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, #1a73e8, #1e8e3e);
+        width: 0%;
+        transition: width 0.4s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .summary-cards {
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+        margin-bottom: 15px;
+    }
+    .summary-card {
+        background: linear-gradient(135deg, #1a73e8, #1a3c6e);
+        color: #fff;
+        padding: 15px 20px;
+        border-radius: 8px;
+        min-width: 140px;
+    }
+    .summary-card .num { font-size: 24px; font-weight: bold; }
+    .summary-card .label { font-size: 12px; opacity: 0.9; }
+    .summary-card.orange { background: linear-gradient(135deg, #f5a623, #b8770e); }
+    .summary-card.red { background: linear-gradient(135deg, #e05555, #a12b2b); }
+
+    .hidden { display: none; }
+
+    .pic-input {
+        width: 140px;
+        padding: 6px 8px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        font-size: 13px;
+    }
+    .pic-input.filled { border-color: #1e8e3e; background: #eafaf0; }
+</style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header-row">
+        <h1>ECO Tracker Dashboard</h1>
+        <button class="btn btn-green" onclick="openModal()">+ Upload Files</button>
+    </div>
+
+    <div class="stats" id="statsRow">
+        <div class="stat-card">
+            <div class="num" id="statTotal">0</div>
+            <div class="label">Total Records</div>
+        </div>
+        <div class="stat-card">
+            <div class="num" id="statComplete">0</div>
+            <div class="label">Complete</div>
+        </div>
+        <div class="stat-card new" id="statNewCard" style="display:none;">
+            <div class="num" id="statNew">0</div>
+            <div class="label">Newly Imported</div>
+        </div>
+    </div>
+
+    <div class="toolbar">
+        <input type="text" id="searchInput" placeholder="Search by subject, ECO No., ECR No., project, customer..." oninput="renderTable()">
+        <select id="yearFilter" onchange="renderTable()"><option value="">All Years</option></select>
+        <select id="wwFilter" onchange="renderTable()"><option value="">All Weeks</option></select>
+        <select id="statusFilter" onchange="renderTable()"><option value="">All Statuses</option></select>
+        <button class="btn" onclick="resetFilters()">Reset</button>
+    </div>
+
+    <div class="table-wrap">
+    <table>
+        <thead>
+        <tr>
+            <th>Year</th>
+            <th>WW</th>
+            <th>Month</th>
+            <th>ECO No.</th>
+            <th>ECR No.</th>
+            <th>Customer</th>
+            <th>Project</th>
+            <th>ECO Implement Method</th>
+            <th>EC Type and Category</th>
+            <th>Status</th>
+            <th>Subject</th>
+            <th>Status in Agile</th>
+        </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+    </table>
+    </div>
+</div>
+
+<!-- ============ UPLOAD MODAL ============ -->
+<div class="modal-overlay" id="modalOverlay">
+    <div class="modal-box">
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+
+        <div class="stepper" id="stepper">
+            <div class="step active" data-step="1"><div class="circle">1</div><div class="label">Upload Files</div></div>
+            <div class="step" data-step="2"><div class="circle">2</div><div class="label">Validate</div></div>
+            <div class="step" data-step="3"><div class="circle">3</div><div class="label">Clean and Match</div></div>
+            <div class="step" data-step="4"><div class="circle">4</div><div class="label">Fill PIC</div></div>
+            <div class="step" data-step="5"><div class="circle">5</div><div class="label">Review and Import</div></div>
+        </div>
+
+        <!-- STEP 1 -->
+        <div class="card" id="panel-1">
+            <h2>Step 1: Upload Files</h2>
+            <div class="upload-boxes">
+                <div class="upload-box" id="box1">
+                    <div class="file-icon">SIGNOFF FILE</div>
+                    <div><b>user_signoff</b> (.xls, .xlsx, .csv)</div>
+                    <input type="file" id="file1" accept=".xls,.xlsx,.csv">
+                    <label for="file1">Choose File</label>
+                    <div class="filename" id="filename1"></div>
+                    <div class="req-columns">
+                        Required columns: Change Number, Status, Status Entry Date, User Name, User Role, User Add Date, Signoff Date, Signoff Duration
+                    </div>
+                </div>
+                <div class="upload-box" id="box2">
+                    <div class="file-icon">SEARCH RESULT FILE</div>
+                    <div><b>SearchResult</b> (.xls, .xlsx, .csv)</div>
+                    <input type="file" id="file2" accept=".xls,.xlsx,.csv">
+                    <label for="file2">Choose File</label>
+                    <div class="filename" id="filename2"></div>
+                    <div class="req-columns">
+                        Required columns: Change Number, ECR No., Customer Brand Name, Project Name, Change Method, EC Type &amp; Category, Status, Subject
+                    </div>
+                </div>
+            </div>
+            <div class="actions-row">
+                <button class="btn" id="btnValidate" disabled onclick="goToStep2()">Validate Files</button>
+            </div>
+        </div>
+
+        <!-- STEP 2 -->
+        <div class="card hidden" id="panel-2">
+            <h2>Step 2: Validate Files</h2>
+            <div class="log" id="validationLog"></div>
+            <div class="actions-row">
+                <button class="btn" onclick="backToStep(1)">Back</button>
+                <button class="btn btn-green" onclick="goToStep3()">Continue</button>
+            </div>
+        </div>
+
+        <!-- STEP 3 -->
+        <div class="card hidden" id="panel-3">
+            <h2>Step 3 and 4: Read, Clean and Match Records</h2>
+            <div class="progress-wrap"><div class="progress-bar" id="progressBar">0%</div></div>
+            <div class="log" id="matchLog"></div>
+            <div class="actions-row">
+                <button class="btn" onclick="backToStep(2)">Back</button>
+                <button class="btn btn-green" id="btnContinueAnalyze" onclick="goToStep4()" disabled>Continue</button>
+            </div>
+        </div>
+
+        <!-- STEP 4 -->
+        <div class="card hidden" id="panel-4">
+            <h2>Step 6: Fill In PMC and QA PIC</h2>
+            <p style="font-size:13px;color:#666;">
+                Please enter the name of the PMC and QA person in charge (PIC) for each record.
+                Status in Agile will be determined later based on this information.
+            </p>
+            <div class="table-wrap" style="max-height:350px;">
+                <table id="signoffTable">
+                    <thead>
+                    <tr>
+                        <th>Change Number</th>
+                        <th>PMC PIC</th>
+                        <th>QA PIC</th>
+                    </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="actions-row">
+                <button class="btn" onclick="backToStep(3)">Back</button>
+                <button class="btn btn-green" onclick="goToStep5()">Generate ECO Tracker</button>
+            </div>
+        </div>
+
+        <!-- STEP 5 -->
+        <div class="card hidden" id="panel-5">
+            <h2>Step 7: Review New Records Before Import</h2>
+            <div class="summary-cards">
+                <div class="summary-card"><div class="num" id="sumTotal">0</div><div class="label">Total New Records</div></div>
+                <div class="summary-card"><div class="num" id="sumComplete">0</div><div class="label">Complete</div></div>
+                <div class="summary-card orange"><div class="num" id="sumPending">0</div><div class="label">In Progress / Pending</div></div>
+                <div class="summary-card red"><div class="num" id="sumUnmatched">0</div><div class="label">Unmatched Records</div></div>
+            </div>
+            <div class="table-wrap" style="max-height:300px;">
+                <table id="finalTable">
+                    <thead>
+                    <tr>
+                        <th>Year</th><th>WW</th><th>Month</th><th>ECO No.</th><th>ECR No.</th>
+                        <th>Customer</th><th>Project</th><th>ECO Implement Method</th>
+                        <th>EC Type and Category</th><th>Status</th><th>Subject</th>
+                        <th>PMC PIC</th><th>QA PIC</th><th>Status in Agile</th>
+                    </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="actions-row">
+                <button class="btn" onclick="backToStep(4)">Back</button>
+                <button class="btn btn-green" onclick="importIntoDashboard()">Import into Dashboard</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ============================================================
+// EXISTING DATABASE RECORDS (simulating previously stored data)
+// ============================================================
+let dashboardRecords = [
+    { year: 2026, ww: 1, month: 'Jan', ecoNo: 'ECO0011841', ecrNo: 'R2502243', customer: 'AWS (CUST00003)', project: 'Nanaka', method: 'Immediate Change', ecType: 'Material|EE Related', status: 'Complete', subject: '[Nanaka][PDB] Addition of HSC MOSFET approved by AWS for Multi-Sourcing', agile: 'CLOSED', isNew: false },
+    { year: 2026, ww: 1, month: 'Jan', ecoNo: 'ECO0011855', ecrNo: 'R2502294', customer: 'Oracle (CUST00032)', project: 'Oracle', method: 'Immediate Change', ecType: 'Material|EE Related', status: 'Complete', subject: '[Oracle Private] BOM ECR for SP board (MP)', agile: 'CLOSED', isNew: false },
+    { year: 2026, ww: 1, month: 'Jan', ecoNo: 'ECO0011851', ecrNo: 'R2502277', customer: 'Oracle (CUST00032)', project: 'Oracle', method: 'Immediate Change', ecType: 'Material|EE Related', status: 'Complete', subject: '[Oracle Private] BOM ECR for E1.S board (1st source)', agile: 'CLOSED', isNew: false },
+    { year: 2026, ww: 1, month: 'Jan', ecoNo: 'ECO0011852', ecrNo: 'R2502289', customer: 'Oracle (CUST00032)', project: 'Oracle', method: 'Immediate Change', ecType: 'Material|EE Related', status: 'Complete', subject: '[Oracle Private] BOM ECR for E1.S board (MP)', agile: 'CLOSED', isNew: false },
+    { year: 2026, ww: 1, month: 'Jan', ecoNo: 'ECO0011853', ecrNo: 'R2502292', customer: 'Oracle (CUST00032)', project: 'Oracle', method: 'Immediate Change', ecType: 'Material|EE Related', status: 'Complete', subject: '[Oracle Private] BOM ECR for SP board (2nd source)', agile: 'CLOSED', isNew: false }
+];
+
+// ============================================================
+// MOCK UPLOAD DATA (simulating what would be parsed from files)
+// ============================================================
+const mockSearchResult = [
+    { changeNumber: 'ECO0011999', ecrNo: 'R2502399', customer: 'Google (CUST00050)', project: 'Falcon', changeMethod: 'Running Change', ecType: 'Material|ME Related', status: 'In Progress', subject: '[Falcon] Chassis bracket revision update' },
+    { changeNumber: 'ECO0012005', ecrNo: 'R2502401', customer: 'Meta (CUST00061)', project: 'Orion', changeMethod: 'Immediate Change', ecType: 'Material|FW Related', status: 'Pending', subject: '[Orion] Firmware update for BMC compatibility' },
+    { changeNumber: 'ECO0012010', ecrNo: 'R2502410', customer: 'AWS (CUST00003)', project: 'Teton2', changeMethod: 'Immediate Change', ecType: 'Material|EE Related', status: 'Complete', subject: '[Teton2] Add alternate source component' }
+];
+
+const mockUserSignoff = [
+    { changeNumber: 'ECO0011999', statusEntryDate: '2026-02-09' },
+    { changeNumber: 'ECO0012005', statusEntryDate: '2026-02-10' },
+    { changeNumber: 'ECO0012010', statusEntryDate: '2026-02-11' }
+];
+
+let mergedRecords = [];
+
+// ============================================================
+// DASHBOARD RENDERING
+// ============================================================
+function populateFilters() {
+    const years = [...new Set(dashboardRecords.map(r => r.year))].sort();
+    const wws = [...new Set(dashboardRecords.map(r => r.ww))].sort((a,b)=>a-b);
+    const statuses = [...new Set(dashboardRecords.map(r => r.status))].sort();
+
+    const yearSel = document.getElementById('yearFilter');
+    const wwSel = document.getElementById('wwFilter');
+    const statusSel = document.getElementById('statusFilter');
+
+    yearSel.innerHTML = '<option value="">All Years</option>' + years.map(y => '<option value="' + y + '">' + y + '</option>').join('');
+    wwSel.innerHTML = '<option value="">All Weeks</option>' + wws.map(w => '<option value="' + w + '">WW' + w + '</option>').join('');
+    statusSel.innerHTML = '<option value="">All Statuses</option>' + statuses.map(s => '<option value="' + s + '">' + s + '</option>').join('');
+}
+
+function resetFilters() {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('yearFilter').value = '';
+    document.getElementById('wwFilter').value = '';
+    document.getElementById('statusFilter').value = '';
+    renderTable();
+}
+
+function renderTable() {
+    const search = document.getElementById('searchInput').value.toLowerCase();
+    const yearF = document.getElementById('yearFilter').value;
+    const wwF = document.getElementById('wwFilter').value;
+    const statusF = document.getElementById('statusFilter').value;
+
+    let filtered = dashboardRecords.filter(r => {
+        if (yearF && String(r.year) !== yearF) return false;
+        if (wwF && String(r.ww) !== wwF) return false;
+        if (statusF && r.status !== statusF) return false;
+        if (search) {
+            const hay = (r.subject + ' ' + r.ecoNo + ' ' + r.ecrNo + ' ' + r.project + ' ' + r.customer).toLowerCase();
+            if (!hay.includes(search)) return false;
+        }
+        return true;
+    });
+
+    filtered.sort((a,b) => b.year - a.year || b.ww - a.ww);
+
+    const tbody = document.getElementById('tableBody');
+    tbody.innerHTML = '';
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;padding:20px;">No records found.</td></tr>';
+    }
+
+    filtered.forEach(r => {
+        const statusClass = r.status === 'Complete' ? 'status-complete' : (r.status === 'In Progress' ? 'status-progress' : 'status-pending');
+        const agileClass = r.agile === 'CLOSED' ? 'agile-closed' : 'agile-open';
+        const tr = document.createElement('tr');
+        if (r.isNew) tr.classList.add('new-row');
+        tr.innerHTML =
+            '<td>' + r.year + '</td>' +
+            '<td>' + r.ww + '</td>' +
+            '<td>' + r.month + '</td>' +
+            '<td>' + r.ecoNo + (r.isNew ? '<span class="new-tag">NEW</span>' : '') + '</td>' +
+            '<td>' + r.ecrNo + '</td>' +
+            '<td>' + r.customer + '</td>' +
+            '<td>' + r.project + '</td>' +
+            '<td>' + r.method + '</td>' +
+            '<td>' + r.ecType + '</td>' +
+            '<td><span class="status-badge ' + statusClass + '">' + r.status + '</span></td>' +
+            '<td class="subject-cell">' + r.subject + '</td>' +
+            '<td class="' + agileClass + '">' + r.agile + '</td>';
+        tbody.appendChild(tr);
+    });
+
+    document.getElementById('statTotal').textContent = dashboardRecords.length;
+    document.getElementById('statComplete').textContent = dashboardRecords.filter(r => r.status === 'Complete').length;
+    const newCount = dashboardRecords.filter(r => r.isNew).length;
+    document.getElementById('statNew').textContent = newCount;
+    document.getElementById('statNewCard').style.display = newCount > 0 ? 'block' : 'none';
+}
+
+populateFilters();
+renderTable();
+
+// ============================================================
+// MODAL CONTROLS
+// ============================================================
+function openModal() {
+    document.getElementById('modalOverlay').classList.add('active');
+    resetModalState();
+}
+function closeModal() {
+    document.getElementById('modalOverlay').classList.remove('active');
+}
+function resetModalState() {
+    setStep(1);
+    document.getElementById('filename1').textContent = '';
+    document.getElementById('filename2').textContent = '';
+    document.getElementById('box1').classList.remove('filled');
+    document.getElementById('box2').classList.remove('filled');
+    document.getElementById('file1').value = '';
+    document.getElementById('file2').value = '';
+    file1Chosen = false;
+    file2Chosen = false;
+    document.getElementById('btnValidate').disabled = true;
+}
+
+function setStep(n) {
+    document.querySelectorAll('.step').forEach(s => {
+        const stepNum = parseInt(s.dataset.step);
+        s.classList.remove('active','done');
+        if (stepNum < n) s.classList.add('done');
+        if (stepNum === n) s.classList.add('active');
+    });
+    for (let i = 1; i <= 5; i++) {
+        document.getElementById('panel-' + i).classList.toggle('hidden', i !== n);
+    }
+}
+function backToStep(n) { setStep(n); }
+
+// ---------- STEP 1: Upload handling ----------
+let file1Chosen = false, file2Chosen = false;
+
+document.getElementById('file1').addEventListener('change', function(e){
+    if (e.target.files.length) {
+        document.getElementById('filename1').textContent = 'Selected: ' + e.target.files[0].name;
+        document.getElementById('box1').classList.add('filled');
+        file1Chosen = true;
+    }
+    checkUploadReady();
+});
+document.getElementById('file2').addEventListener('change', function(e){
+    if (e.target.files.length) {
+        document.getElementById('filename2').textContent = 'Selected: ' + e.target.files[0].name;
+        document.getElementById('box2').classList.add('filled');
+        file2Chosen = true;
+    }
+    checkUploadReady();
+});
+function checkUploadReady(){
+    document.getElementById('btnValidate').disabled = !(file1Chosen && file2Chosen);
+}
+
+function goToStep2() {
+    setStep(2);
+    runValidation();
+}
+
+// ---------- STEP 2: Validation simulation ----------
+function runValidation() {
+    const log = document.getElementById('validationLog');
+    log.innerHTML = '';
+    const lines = [
+        { text: 'Checking uploaded files...', type: 'info' },
+        { text: '[OK] Signoff file uploaded successfully.', type: 'ok' },
+        { text: '[OK] SearchResult file uploaded successfully.', type: 'ok' },
+        { text: 'Validating required columns for signoff file...', type: 'info' },
+        { text: '[OK] Change Number - Found', type: 'ok' },
+        { text: '[OK] Status - Found', type: 'ok' },
+        { text: '[OK] Status Entry Date - Found', type: 'ok' },
+        { text: '[OK] User Name - Found', type: 'ok' },
+        { text: '[OK] User Role - Found', type: 'ok' },
+        { text: '[OK] User Add Date - Found', type: 'ok' },
+        { text: '[OK] Signoff Date - Found', type: 'ok' },
+        { text: '[OK] Signoff Duration - Found', type: 'ok' },
+        { text: 'Validating required columns for SearchResult file...', type: 'info' },
+        { text: '[OK] Change Number - Found', type: 'ok' },
+        { text: '[OK] ECR No. - Found', type: 'ok' },
+        { text: '[OK] Customer Brand Name - Found', type: 'ok' },
+        { text: '[OK] Project Name - Found', type: 'ok' },
+        { text: '[OK] Change Method - Found', type: 'ok' },
+        { text: '[OK] EC Type and Category - Found', type: 'ok' },
+        { text: '[OK] Status - Found', type: 'ok' },
+        { text: '[OK] Subject - Found', type: 'ok' },
+        { text: '[DONE] All required columns validated. Proceeding to data cleaning...', type: 'ok' }
+    ];
+    let i = 0;
+    const interval = setInterval(() => {
+        if (i < lines.length) {
+            const div = document.createElement('div');
+            div.className = lines[i].type;
+            div.textContent = lines[i].text;
+            log.appendChild(div);
+            log.scrollTop = log.scrollHeight;
+            i++;
+        } else {
+            clearInterval(interval);
+        }
+    }, 90);
+}
+
+// ---------- STEP 3: Clean & Match simulation ----------
+function goToStep3() {
+    setStep(3);
+    runMatching();
+}
+
+function runMatching() {
+    const log = document.getElementById('matchLog');
+    const bar = document.getElementById('progressBar');
+    log.innerHTML = '';
+    bar.style.width = '0%';
+    bar.textContent = '0%';
+    document.getElementById('btnContinueAnalyze').disabled = true;
+
+    const steps = [
+        'Importing signoff file...',
+        'Importing SearchResult file...',
+        'Removing empty rows...',
+        'Removing duplicate records...',
+        'Standardizing column formats (dates, text)...',
+        'Matching records using Change Number...'
+    ];
+
+    let i = 0;
+    const stepInterval = setInterval(() => {
+        if (i < steps.length) {
+            const div = document.createElement('div');
+            div.className = 'info';
+            div.textContent = steps[i];
+            log.appendChild(div);
+            log.scrollTop = log.scrollHeight;
+            bar.style.width = Math.round(((i+1)/steps.length)*60) + '%';
+            bar.textContent = Math.round(((i+1)/steps.length)*60) + '%';
+            i++;
+        } else {
+            clearInterval(stepInterval);
+            performMatch(log, bar);
+        }
+    }, 250);
+}
+
+function performMatch(log, bar) {
+    mergedRecords = [];
+    let matchedCount = 0, unmatchedCount = 0;
+
+    mockSearchResult.forEach((rec, idx) => {
+        const signoffEntries = mockUserSignoff.filter(s => s.changeNumber === rec.changeNumber);
+        setTimeout(() => {
+            if (signoffEntries.length > 0) {
+                matchedCount++;
+                const div = document.createElement('div');
+                div.className = 'ok';
+                div.textContent = '[MATCH] ' + rec.changeNumber + ' - merged with ' + signoffEntries.length + ' signoff record(s).';
+                log.appendChild(div);
+                mergedRecords.push({ ...rec, signoffEntries, matched: true, pmcPic: '', qaPic: '' });
+            } else {
+                unmatchedCount++;
+                const div = document.createElement('div');
+                div.className = 'warn';
+                div.textContent = '[UNMATCHED] ' + rec.changeNumber + ' - no signoff record found. Flagged for review.';
+                log.appendChild(div);
+                mergedRecords.push({ ...rec, signoffEntries: [], matched: false, pmcPic: '', qaPic: '' });
+            }
+            log.scrollTop = log.scrollHeight;
+
+            const pct = 60 + Math.round(((idx+1)/mockSearchResult.length)*40);
+            bar.style.width = pct + '%';
+            bar.textContent = pct + '%';
+
+            if (idx === mockSearchResult.length - 1) {
+                setTimeout(() => {
+                    const summary = document.createElement('div');
+                    summary.className = 'ok';
+                    summary.style.marginTop = '10px';
+                    summary.textContent = '[DONE] Matching complete: ' + matchedCount + ' matched, ' + unmatchedCount + ' unmatched.';
+                    log.appendChild(summary);
+                    log.scrollTop = log.scrollHeight;
+                    document.getElementById('btnContinueAnalyze').disabled = false;
+                }, 200);
+            }
+        }, idx * 300);
+    });
+}
+
+// ---------- STEP 4: Fill PMC / QA PIC ----------
+function goToStep4() {
+    setStep(4);
+    const tbody = document.querySelector('#signoffTable tbody');
+    tbody.innerHTML = '';
+
+    mergedRecords.forEach((rec, index) => {
+        const tr = document.createElement('tr');
+        tr.id = 'signoff-row-' + index;
+        tr.innerHTML =
+            '<td>' + rec.changeNumber + '</td>' +
+            '<td><input type="text" class="pic-input" placeholder="Enter PMC name" value="' + rec.pmcPic + '" oninput="updatePic(' + index + ', \'pmc\', this.value, this)"></td>' +
+            '<td><input type="text" class="pic-input" placeholder="Enter QA name" value="' + rec.qaPic + '" oninput="updatePic(' + index + ', \'qa\', this.value, this)"></td>';
+        tbody.appendChild(tr);
+    });
+}
+
+function updatePic(index, type, value, el) {
+    if (type === 'pmc') mergedRecords[index].pmcPic = value;
+    if (type === 'qa') mergedRecords[index].qaPic = value;
+
+    if (value.trim() !== '') {
+        el.classList.add('filled');
+    } else {
+        el.classList.remove('filled');
+    }
+}
+
+function getWeekNumber(d) {
+    const onejan = new Date(d.getFullYear(), 0, 1);
+    return Math.ceil((((d - onejan) / 86400000) + onejan.getDay() + 1) / 7);
+}
+
+// ---------- STEP 5: Final review table ----------
+function goToStep5() {
+    setStep(5);
+    const tbody = document.querySelector('#finalTable tbody');
+    tbody.innerHTML = '';
+
+    let complete = 0, pending = 0, unmatched = 0;
+
+    mergedRecords.forEach(rec => {
+        if (!rec.matched) unmatched++;
+
+        // Determine Status in Agile based on PIC fields filled
+        let statusInAgile = 'Pending';
+        if (rec.pmcPic.trim() !== '' && rec.qaPic.trim() !== '') {
+            statusInAgile = 'Complete';
+        } else if (rec.pmcPic.trim() !== '' || rec.qaPic.trim() !== '') {
+            statusInAgile = 'In Progress';
+        }
+        rec.statusInAgile = statusInAgile;
+
+        if (statusInAgile === 'Complete') complete++;
+        else pending++;
+
+        const dateStr = (rec.signoffEntries[0] && rec.signoffEntries[0].statusEntryDate) || '2026-01-01';
+        const d = new Date(dateStr);
+        rec.year = d.getFullYear();
+        rec.month = d.toLocaleString('default', { month: 'short' });
+        rec.ww = getWeekNumber(d);
+
+        const badgeClass = statusInAgile === 'Complete' ? 'status-complete' : (statusInAgile === 'In Progress' ? 'status-progress' : 'status-pending');
+
+        const tr = document.createElement('tr');
+        tr.innerHTML =
+            '<td>' + rec.year + '</td>' +
+            '<td>' + rec.ww + '</td>' +
+            '<td>' + rec.month + '</td>' +
+            '<td>' + rec.changeNumber + '</td>' +
+            '<td>' + rec.ecrNo + '</td>' +
+            '<td>' + rec.customer + '</td>' +
+            '<td>' + rec.project + '</td>' +
+            '<td>' + rec.changeMethod + '</td>' +
+            '<td>' + rec.ecType + '</td>' +
+            '<td>' + rec.status + '</td>' +
+            '<td style="max-width:280px;">' + rec.subject + '</td>' +
+            '<td>' + (rec.pmcPic || '-') + '</td>' +
+            '<td>' + (rec.qaPic || '-') + '</td>' +
+            '<td><span class="status-badge ' + badgeClass + '">' + statusInAgile + '</span></td>';
+        tbody.appendChild(tr);
+    });
+
+    document.getElementById('sumTotal').textContent = mergedRecords.length;
+    document.getElementById('sumComplete').textContent = complete;
+    document.getElementById('sumPending').textContent = pending;
+    document.getElementById('sumUnmatched').textContent = unmatched;
+}
+
+// ---------- Import into main dashboard ----------
+function importIntoDashboard() {
+    mergedRecords.forEach(rec => {
+        dashboardRecords.push({
+            year: rec.year,
+            ww: rec.ww,
+            month: rec.month,
+            ecoNo: rec.changeNumber,
+            ecrNo: rec.ecrNo,
+            customer: rec.customer,
+            project: rec.project,
+            method: rec.changeMethod,
+            ecType: rec.ecType,
+            status: rec.status,
+            subject: rec.subject,
+            agile: rec.statusInAgile === 'Complete' ? 'CLOSED' : 'OPEN',
+            isNew: true
+        });
+    });
+
+    populateFilters();
+    renderTable();
+    closeModal();
+    alert('Import complete: ' + mergedRecords.length + ' new record(s) added to the ECO Tracker Dashboard.');
+}
+</script>
+</body>
+</html>
