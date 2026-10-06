@@ -28,6 +28,9 @@ assertEq(ECOProcessor::normalizeEcoNo("  ECO-999-X  "), "ECO-999-X", "1.4 Normal
 assertEq(ECOProcessor::cleanStatus("In Progress # No Controller"), "In Progress", "2.1 Remove '# No Controller' from In Progress");
 assertEq(ECOProcessor::cleanStatus("Closed # No Controller"), "Closed", "2.2 Remove '# No Controller' from Closed");
 assertEq(ECOProcessor::cleanStatus("Open"), "Open", "2.3 Status without '# No Controller' remains unchanged");
+assertEq(ECOProcessor::statusToAgileStatus("Complete"), "Closed", "2.4 Complete reviewer status maps to Agile Closed");
+assertEq(ECOProcessor::statusToAgileStatus("complete # No Controller"), "Closed", "2.5 Complete status with controller suffix maps to Agile Closed");
+assertEq(ECOProcessor::statusToAgileStatus("Reviewer 1"), "Open", "2.6 Non-complete reviewer status maps to Agile Open");
 
 // 3. Date Parsing
 $dt1 = ECOProcessor::parseAgileDate("2025/09/02 10:34:40 AM CST");

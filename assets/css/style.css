@@ -228,6 +228,8 @@ body {
 }
 
 .kpi-card.total .kpi-indicator { background: var(--brand-primary); }
+.kpi-card.agile-open .kpi-indicator { background: #0284c7; }
+.kpi-card.agile-closed .kpi-indicator { background: #16a34a; }
 .kpi-card.pending-pmc .kpi-indicator { background: var(--status-pending-pmc); }
 .kpi-card.pending-qa .kpi-indicator { background: var(--status-pending-qa); }
 .kpi-card.completed .kpi-indicator { background: var(--status-completed); }

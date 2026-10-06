@@ -263,6 +263,14 @@ class ECOProcessor
     }
 
     /**
+     * Derive Agile status from the reviewer status.
+     */
+    public static function statusToAgileStatus(?string $status): string
+    {
+        return strcasecmp(self::cleanStatus($status), 'Complete') === 0 ? 'Closed' : 'Open';
+    }
+
+    /**
      * Parse Agile PLM dates safely into DateTime object
      * Handles formats like "2025/09/02 10:34:40 AM CST" or Excel serial floats
      */
@@ -647,9 +655,7 @@ class ECOProcessor
             $rawStatus = (string)($row[$masterMap['status']] ?? '');
             $cleanStatus = self::cleanStatus($rawStatus);
 
-            $statusInAgile = isset($masterMap['status_in_agile'])
-                ? self::cleanText((string)($row[$masterMap['status_in_agile']] ?? ''))
-                : $cleanStatus;
+            $statusInAgile = self::statusToAgileStatus($cleanStatus);
 
             // PMC & QA sites directly from SearchResult
             $pmcSite = self::cleanText((string)($row[$masterMap['pmc_site']] ?? ''));

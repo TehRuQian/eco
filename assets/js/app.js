@@ -45,6 +45,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (data.success && data.summary) {
                     const s = data.summary;
                     document.getElementById('kpiTotalEco').textContent = s.total_eco;
+                    document.getElementById('kpiAgileOpen').textContent = s.agile_open;
+                    document.getElementById('kpiAgileClosed').textContent = s.agile_closed;
                     document.getElementById('kpiPendingPmc').textContent = s.pending_pmc;
                     document.getElementById('kpiPendingQa').textContent = s.pending_qa;
                     document.getElementById('kpiCompleted').textContent = s.completed;
@@ -438,12 +440,13 @@ document.addEventListener('DOMContentLoaded', function () {
     const filterWw = document.getElementById('filterWw');
     const resetFiltersBtn = document.getElementById('resetFiltersBtn');
     const rowCountEl = document.getElementById('tableRowCount');
+    let kpiAgileStatus = '';
 
     function applyFilters() {
         const query = (searchBox ? searchBox.value : '').toLowerCase().trim();
         const cust = filterCustomer ? filterCustomer.value : '';
         const proj = filterProject ? filterProject.value : '';
-        const agileSt = filterAgileStatus ? filterAgileStatus.value : '';
+        const agileSt = kpiAgileStatus || (filterAgileStatus ? filterAgileStatus.value : '');
         const trackSt = filterTrackerStatus ? filterTrackerStatus.value : '';
         const pmcComp = filterPmcCompleted ? filterPmcCompleted.value : '';
         const qaComp = filterQaCompleted ? filterQaCompleted.value : '';
@@ -506,8 +509,12 @@ document.addEventListener('DOMContentLoaded', function () {
     [searchBox, filterCustomer, filterProject, filterAgileStatus,
      filterTrackerStatus, filterPmcCompleted, filterQaCompleted, filterYear, filterWw].forEach(el => {
         if (el) {
-            el.addEventListener('input', applyFilters);
-            el.addEventListener('change', applyFilters);
+            const onFilterChange = function () {
+                if (el === filterAgileStatus) kpiAgileStatus = '';
+                applyFilters();
+            };
+            el.addEventListener('input', onFilterChange);
+            el.addEventListener('change', onFilterChange);
         }
     });
 
@@ -523,6 +530,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (filterYear) filterYear.value = '';
             if (filterWw) filterWw.value = '';
 
+            kpiAgileStatus = '';
             document.querySelectorAll('.kpi-card').forEach(c => c.classList.remove('active'));
             applyFilters();
         });
@@ -531,13 +539,28 @@ document.addEventListener('DOMContentLoaded', function () {
     // -------------------------------------------------------------
     // KPI Card Click Filter Quick-Shortcuts
     // -------------------------------------------------------------
+    function clearNonAgileFilters() {
+        if (searchBox) searchBox.value = '';
+        if (filterCustomer) filterCustomer.value = '';
+        if (filterProject) filterProject.value = '';
+        if (filterTrackerStatus) filterTrackerStatus.value = '';
+        if (filterPmcCompleted) filterPmcCompleted.value = '';
+        if (filterQaCompleted) filterQaCompleted.value = '';
+        if (filterYear) filterYear.value = '';
+        if (filterWw) filterWw.value = '';
+    }
+
     document.querySelectorAll('.kpi-card').forEach(card => {
         card.addEventListener('click', function () {
             const filterKey = this.getAttribute('data-filter');
             document.querySelectorAll('.kpi-card').forEach(c => c.classList.remove('active'));
 
+            const hadKpiAgileStatus = !!kpiAgileStatus;
+            kpiAgileStatus = '';
+            if (hadKpiAgileStatus && filterAgileStatus) filterAgileStatus.value = '';
             if (!filterKey || filterKey === 'all') {
                 if (filterTrackerStatus) filterTrackerStatus.value = '';
+                if (filterAgileStatus) filterAgileStatus.value = '';
                 applyFilters();
                 return;
             }
@@ -550,6 +573,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 filterTrackerStatus.value = 'Pending QA';
             } else if (filterKey === 'completed' && filterTrackerStatus) {
                 filterTrackerStatus.value = 'Completed';
+            } else if (filterKey === 'agile_open') {
+                clearNonAgileFilters();
+                kpiAgileStatus = 'Open';
+                if (filterAgileStatus) filterAgileStatus.value = 'Open';
+            } else if (filterKey === 'agile_closed') {
+                clearNonAgileFilters();
+                kpiAgileStatus = 'Closed';
+                if (filterAgileStatus) filterAgileStatus.value = 'Closed';
             }
             applyFilters();
         });

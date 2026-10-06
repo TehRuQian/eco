@@ -24,6 +24,8 @@ function dash($v): string
 
 $records = [];
 $totalEco = 0;
+$agileOpen = 0;
+$agileClosed = 0;
 $pendingPmc = 0;
 $pendingQa = 0;
 $completed = 0;
@@ -65,7 +67,6 @@ if ($pdo) {
         $colCategory    = in_array('ec_type_category', $masterCols, true) ? 'em.ec_type_category' : "NULL AS ec_type_category";
         $colStatus      = in_array('status', $masterCols, true) ? 'em.status AS cleaned_status' : "NULL AS cleaned_status";
         $colSubject     = in_array('subject', $masterCols, true) ? 'em.subject' : "NULL AS subject";
-        $colAgileStatus = in_array('status_in_agile', $masterCols, true) ? 'em.status_in_agile' : "NULL AS status_in_agile";
         $colWipAction   = in_array('wip_action', $masterCols, true) ? 'em.wip_action' : "NULL AS wip_action";
         $colFgAction    = in_array('fg_action', $masterCols, true) ? 'em.fg_action' : "NULL AS fg_action";
         $colWhAction    = in_array('warehouse_action', $masterCols, true) ? 'em.warehouse_action' : "NULL AS warehouse_action";
@@ -121,7 +122,6 @@ if ($pdo) {
                 {$colCategory},
                 {$colStatus},
                 {$colSubject},
-                {$colAgileStatus},
                 {$colWipAction},
                 {$colFgAction},
                 {$colWhAction},
@@ -192,7 +192,13 @@ if ($pdo) {
             // Dropdown options
             if (!empty($r['customer'])) $customers[$r['customer']] = true;
             if (!empty($r['project'])) $projects[$r['project']] = true;
-            if (!empty($r['status_in_agile'])) $agileStatuses[$r['status_in_agile']] = true;
+            $derivedAgileStatus = ECOProcessor::statusToAgileStatus((string)($r['cleaned_status'] ?? ''));
+            $agileStatuses[$derivedAgileStatus] = true;
+            if ($derivedAgileStatus === 'Closed') {
+                $agileClosed++;
+            } else {
+                $agileOpen++;
+            }
             if (!empty($r['year'])) $years[$r['year']] = true;
             if (!empty($r['ww'])) $workWeeks[$r['ww']] = true;
         }
@@ -295,6 +301,26 @@ if ($pdo) {
             </div>
             <div class="kpi-value" id="kpiTotalEco"><?= number_format($totalEco) ?></div>
             <div class="kpi-subtext">Agile Master records</div>
+            <div class="kpi-indicator"></div>
+        </div>
+
+        <div class="kpi-card agile-open" data-filter="agile_open">
+            <div class="kpi-label">
+                <span>Status in Agile: Open</span>
+                <span style="color:#0284c7;">●</span>
+            </div>
+            <div class="kpi-value" id="kpiAgileOpen"><?= number_format($agileOpen) ?></div>
+            <div class="kpi-subtext">ECOs not marked Complete</div>
+            <div class="kpi-indicator"></div>
+        </div>
+
+        <div class="kpi-card agile-closed" data-filter="agile_closed">
+            <div class="kpi-label">
+                <span>Status in Agile: Closed</span>
+                <span style="color:#16a34a;">●</span>
+            </div>
+            <div class="kpi-value" id="kpiAgileClosed"><?= number_format($agileClosed) ?></div>
+            <div class="kpi-subtext">ECOs marked Complete</div>
             <div class="kpi-indicator"></div>
         </div>
 
@@ -440,7 +466,8 @@ if ($pdo) {
                         <th>ECO Number</th>
                         <th>Customer / Project</th>
                         <th>Subject</th>
-                        <th>Agile Status</th>
+                        <th>Status</th>
+                        <th>Status in Agile</th>
                         <th>Tracker Progress</th>
                         <th>PMC Site & Signoff</th>
                         <th>QA Site & Signoff</th>
@@ -452,7 +479,7 @@ if ($pdo) {
                 <tbody id="ecoTableBody">
                     <?php if (empty($records)): ?>
                         <tr>
-                            <td colspan="11">
+                            <td colspan="12">
                                 <div class="empty-state">
                                     <h4>No ECO records found</h4>
                                     <p>Click "Upload Agile Files" above to import SearchResult and User Signoff spreadsheets.</p>
@@ -468,7 +495,9 @@ if ($pdo) {
 
                             $isOverdue = (!empty($r['due_date']) && $r['due_date'] < $today && $trackerStatus !== 'Completed');
                             $hasChanged = !empty($r['status_changed']);
-                            $agileUpper = strtoupper(trim((string)($r['status_in_agile'] ?? '')));
+                            $masterStatus = ECOProcessor::cleanStatus((string)($r['cleaned_status'] ?? ''));
+                            $agileStatus = ECOProcessor::statusToAgileStatus($masterStatus);
+                            $agileUpper = strtoupper($agileStatus);
                         ?>
                         <tr class="eco-row expand-trigger <?= $hasChanged ? 'highlight-changed' : '' ?>"
                             id="row-<?= $ecoNo ?>"
@@ -477,7 +506,7 @@ if ($pdo) {
                             data-customer="<?= h($r['customer']) ?>"
                             data-project="<?= h($r['project']) ?>"
                             data-subject="<?= h($r['subject']) ?>"
-                            data-agile-status="<?= h($r['status_in_agile']) ?>"
+                            data-agile-status="<?= h($agileStatus) ?>"
                             data-tracker-status="<?= h($trackerStatus) ?>"
                             data-pmc-completed="<?= $pmcYes ? '1' : '0' ?>"
                             data-qa-completed="<?= $qaYes ? '1' : '0' ?>"
@@ -521,14 +550,19 @@ if ($pdo) {
                                 </div>
                             </td>
 
-                            <!-- Agile Status -->
+                            <!-- ECO Status -->
+                            <td>
+                                <span class="badge badge-neutral"><?= dash($masterStatus) ?></span>
+                            </td>
+
+                            <!-- Status in Agile -->
                             <td>
                                 <?php if ($agileUpper === 'OPEN'): ?>
                                     <span class="badge badge-open">OPEN</span>
                                 <?php elseif ($agileUpper === 'CLOSED'): ?>
                                     <span class="badge badge-closed">CLOSED</span>
                                 <?php else: ?>
-                                    <span class="badge badge-neutral"><?= dash($r['status_in_agile']) ?></span>
+                                    <span class="badge badge-open">OPEN</span>
                                 <?php endif; ?>
                             </td>
 
@@ -600,7 +634,7 @@ if ($pdo) {
 
                         <!-- Collapsible Detail Accordion Tray -->
                         <tr class="detail-row" id="detail-<?= $ecoNo ?>">
-                            <td colspan="11">
+                            <td colspan="12">
                                 <div class="detail-content">
                                     <!-- Section 1: Agile PLM Master Data -->
                                     <div class="detail-section">

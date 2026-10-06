@@ -265,6 +265,17 @@ try {
             $totalStmt = $pdo->query("SELECT COUNT(*) FROM eco_master");
             $totalEco = (int)$totalStmt->fetchColumn();
 
+            $agileOpen = 0;
+            $agileClosed = 0;
+            $agileStatusStmt = $pdo->query("SELECT status FROM eco_master");
+            while ($statusRow = $agileStatusStmt->fetch(PDO::FETCH_ASSOC)) {
+                if (ECOProcessor::statusToAgileStatus($statusRow['status'] ?? null) === 'Closed') {
+                    $agileClosed++;
+                } else {
+                    $agileOpen++;
+                }
+            }
+
             $pendingPmcStmt = $pdo->query("
                 SELECT COUNT(*) FROM eco_tracking
                 WHERE status_progress = 'Pending PMC' OR (pmc_result_completed = 0 AND qa_result_completed = 0)
@@ -305,6 +316,8 @@ try {
                 'success' => true,
                 'summary' => [
                     'total_eco'         => $totalEco,
+                    'agile_open'        => $agileOpen,
+                    'agile_closed'      => $agileClosed,
                     'pending_pmc'       => $pendingPmc,
                     'pending_qa'        => $pendingQa,
                     'completed'         => $completed,
