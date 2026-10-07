@@ -116,9 +116,6 @@ class ECOProcessor
                         `eco_no` VARCHAR(100) NOT NULL PRIMARY KEY,
                         `internal_status` VARCHAR(100) NULL,
                         `previous_internal_status` VARCHAR(100) NULL,
-                        `user_name` VARCHAR(150) NULL,
-                        `user_role` VARCHAR(100) NULL,
-                        `status_entry_date` DATETIME NULL,
                         `status_changed` TINYINT(1) NOT NULL DEFAULT 0,
                         `status_changed_at` DATETIME NULL,
                         `is_unmatched` TINYINT(1) NOT NULL DEFAULT 0,
@@ -132,9 +129,6 @@ class ECOProcessor
             $requiredSignoff = [
                 'internal_status'          => "VARCHAR(100) NULL",
                 'previous_internal_status' => "VARCHAR(100) NULL",
-                'user_name'                => "VARCHAR(150) NULL",
-                'user_role'                => "VARCHAR(100) NULL",
-                'status_entry_date'        => "DATETIME NULL",
                 'status_changed'           => "TINYINT(1) NOT NULL DEFAULT 0",
                 'status_changed_at'        => "DATETIME NULL",
                 'is_unmatched'             => "TINYINT(1) NOT NULL DEFAULT 0",
@@ -161,8 +155,8 @@ class ECOProcessor
                     CREATE TABLE IF NOT EXISTS `eco_tracking` (
                         `id` INT AUTO_INCREMENT PRIMARY KEY,
                         `eco_no` VARCHAR(100) NOT NULL UNIQUE,
-                        `rework_need` TEXT NULL,
-                        `ecr_category` VARCHAR(100) NULL,
+                        `manual_cut_in_first_mo` TEXT NULL,
+                        `type_of_changes` VARCHAR(100) NULL,
                         `pmc_result_completed` TINYINT(1) NOT NULL DEFAULT 0,
                         `qa_result_completed` TINYINT(1) NOT NULL DEFAULT 0,
                         `first_mo_result` VARCHAR(100) NULL,
@@ -185,8 +179,8 @@ class ECOProcessor
             }
 
             $requiredTracking = [
-                'rework_need'                 => "TEXT NULL",
-                'ecr_category'                => "VARCHAR(100) NULL",
+                'manual_cut_in_first_mo'      => "TEXT NULL",
+                'type_of_changes'             => "VARCHAR(100) NULL",
                 'pmc_result_completed'        => "TINYINT(1) NOT NULL DEFAULT 0",
                 'qa_result_completed'         => "TINYINT(1) NOT NULL DEFAULT 0",
                 'first_mo_result'             => "VARCHAR(100) NULL",
@@ -450,7 +444,7 @@ class ECOProcessor
     /**
      * Find header row and map columns in raw spreadsheet rows
      */
-    private function findHeaderRow(array $rows, array $aliasesMap, int $maxSearchRows = 12): ?array
+    private function findHeaderRow(array $rows, array $aliasesMap, int $maxSearchRows = 100): ?array
     {
         $limit = min($maxSearchRows, count($rows));
         for ($r = 0; $r < $limit; $r++) {
@@ -474,7 +468,7 @@ class ECOProcessor
 
             // Check if minimum required keys found
             $hasEcoNo = isset($matched['eco_no']);
-            $hasStatus = isset($matched['status']);
+            $hasStatus = isset($matched['status']) || isset($matched['internal_status']);
             if ($hasEcoNo && ($hasStatus || count($matched) >= 3)) {
                 return [
                     'header_index' => $r,
@@ -530,7 +524,7 @@ class ECOProcessor
                 $rows = $this->readFileRows($searchResultPath, $searchResultName ?? '');
                 $detect = $this->findHeaderRow($rows, $masterAliases);
                 if (!$detect) {
-                    $errors[] = "SearchResult: Header row could not be identified within first 12 rows.";
+                    $errors[] = "SearchResult: Header row could not be identified within first 100 rows.";
                 } else {
                     $masterFound = $detect['column_map'];
                     $masterHeaderIdx = $detect['header_index'];
@@ -556,12 +550,9 @@ class ECOProcessor
         $signoffAliases = [
             'eco_no'             => ['change number', 'change no', 'eco no', 'eco number', 'change_number'],
             'internal_status'    => ['status', 'internal status', 'signoff status'],
-            'user_name'          => ['user name', 'username', 'approver', 'signoff user'],
-            'user_role'          => ['user role', 'role'],
-            'status_entry_date'  => ['status entry date', 'entry date', 'signoff date']
         ];
 
-        $requiredSignoff = ['eco_no', 'internal_status', 'user_name'];
+        $requiredSignoff = ['eco_no', 'internal_status'];
         $signoffFound = [];
 
         if ($signoffPath && file_exists($signoffPath)) {
@@ -569,7 +560,7 @@ class ECOProcessor
                 $rows = $this->readFileRows($signoffPath, $signoffName ?? '');
                 $detect = $this->findHeaderRow($rows, $signoffAliases);
                 if (!$detect) {
-                    $errors[] = "user_signoff: Header row could not be identified within first 12 rows.";
+                    $errors[] = "user_signoff: Header row could not be identified within first 100 rows. Expected Change Number and Status columns on the same row.";
                 } else {
                     $signoffFound = $detect['column_map'];
                     $signoffHeaderIdx = $detect['header_index'];
@@ -577,7 +568,7 @@ class ECOProcessor
                     foreach ($requiredSignoff as $req) {
                         if (!isset($signoffFound[$req])) {
                             $readable = ucwords(str_replace('_', ' ', $req));
-                            $errors[] = "user_signoff missing required column: '{$readable}' (e.g. Change Number, Status, User Name).";
+                            $errors[] = "user_signoff missing required column: '{$readable}' (e.g. Change Number, Status).";
                         }
                     }
 
@@ -708,19 +699,10 @@ class ECOProcessor
 
                 $rawInternalStatus = (string)($row[$signoffMap['internal_status']] ?? '');
                 $internalStatus    = self::cleanStatus($rawInternalStatus);
-                $userName          = self::cleanText((string)($row[$signoffMap['user_name']] ?? ''));
-
-                $userRole = isset($signoffMap['user_role']) ? self::cleanText((string)($row[$signoffMap['user_role']] ?? '')) : null;
-                $rawEntry = isset($signoffMap['status_entry_date']) ? ($row[$signoffMap['status_entry_date']] ?? null) : null;
-                $dtEntry  = self::parseAgileDate($rawEntry);
-
                 // Signoff represents the latest signoff record for each ECO
                 $signoffData[$ecoNo] = [
                     'eco_no'             => $ecoNo,
                     'internal_status'    => $internalStatus,
-                    'user_name'          => $userName,
-                    'user_role'          => $userRole,
-                    'status_entry_date'  => $dtEntry ? $dtEntry->format('Y-m-d H:i:s') : null,
                 ];
             }
         }
@@ -937,9 +919,6 @@ class ECOProcessor
                         'eco_no'                   => $ecoNo,
                         'internal_status'          => $newStatus,
                         'previous_internal_status' => $prevStatusVal,
-                        'user_name'                => $s['user_name'],
-                        'user_role'                => $s['user_role'],
-                        'status_entry_date'        => $s['status_entry_date'],
                         'status_changed'           => $statusChanged,
                         'status_changed_at'        => $statusChangedAt,
                         'is_unmatched'             => (int)$isUnmatched,

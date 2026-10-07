@@ -25,9 +25,6 @@ CREATE TABLE IF NOT EXISTS `eco_signoff` (
 ALTER TABLE `eco_signoff`
     ADD COLUMN IF NOT EXISTS `internal_status` VARCHAR(100) NULL,
     ADD COLUMN IF NOT EXISTS `previous_internal_status` VARCHAR(100) NULL,
-    ADD COLUMN IF NOT EXISTS `user_name` VARCHAR(150) NULL,
-    ADD COLUMN IF NOT EXISTS `user_role` VARCHAR(100) NULL,
-    ADD COLUMN IF NOT EXISTS `status_entry_date` DATETIME NULL,
     ADD COLUMN IF NOT EXISTS `status_changed` TINYINT(1) NOT NULL DEFAULT 0,
     ADD COLUMN IF NOT EXISTS `status_changed_at` DATETIME NULL,
     ADD COLUMN IF NOT EXISTS `is_unmatched` TINYINT(1) NOT NULL DEFAULT 0,
@@ -45,8 +42,8 @@ CREATE TABLE IF NOT EXISTS `eco_tracking` (
 -- ALTER TABLE `eco_tracking` CHANGE COLUMN `pme_result_completed` `pmc_result_completed` TINYINT(1) NOT NULL DEFAULT 0;
 
 ALTER TABLE `eco_tracking`
-    ADD COLUMN IF NOT EXISTS `rework_need` TEXT NULL,
-    ADD COLUMN IF NOT EXISTS `ecr_category` VARCHAR(100) NULL,
+    ADD COLUMN IF NOT EXISTS `manual_cut_in_first_mo` TEXT NULL,
+    ADD COLUMN IF NOT EXISTS `type_of_changes` VARCHAR(100) NULL,
     ADD COLUMN IF NOT EXISTS `pmc_result_completed` TINYINT(1) NOT NULL DEFAULT 0,
     ADD COLUMN IF NOT EXISTS `qa_result_completed` TINYINT(1) NOT NULL DEFAULT 0,
     ADD COLUMN IF NOT EXISTS `first_mo_result` VARCHAR(100) NULL,

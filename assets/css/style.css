@@ -575,6 +575,10 @@ tr.detail-row.show {
     color: var(--text-primary);
     font-weight: 500;
 }
+.manual-tracking-details .detail-field .label {
+    width: 180px;
+    white-space: nowrap;
+}
 
 /* Modal */
 .modal-overlay {

@@ -82,15 +82,12 @@ if ($pdo) {
 
         $colSignStatus  = in_array('internal_status', $signoffCols, true) ? 'es.internal_status AS signoff_status' : "NULL AS signoff_status";
         $colPrevStatus  = in_array('previous_internal_status', $signoffCols, true) ? 'es.previous_internal_status' : "NULL AS previous_internal_status";
-        $colSignUser    = in_array('user_name', $signoffCols, true) ? 'es.user_name AS signoff_user' : "NULL AS signoff_user";
-        $colSignRole    = in_array('user_role', $signoffCols, true) ? 'es.user_role AS signoff_role' : "NULL AS signoff_role";
-        $colSignDate    = in_array('status_entry_date', $signoffCols, true) ? 'es.status_entry_date AS signoff_date' : "NULL AS signoff_date";
         $colStatusChg   = in_array('status_changed', $signoffCols, true) ? 'es.status_changed' : "0 AS status_changed";
         $colStatusChgAt = in_array('status_changed_at', $signoffCols, true) ? 'es.status_changed_at' : "NULL AS status_changed_at";
         $colIsUnmatched = in_array('is_unmatched', $signoffCols, true) ? 'es.is_unmatched' : "0 AS is_unmatched";
 
-        $colRework      = in_array('rework_need', $trackingCols, true) ? 'et.rework_need' : "NULL AS rework_need";
-        $colEcrCat      = in_array('ecr_category', $trackingCols, true) ? 'et.ecr_category' : "NULL AS ecr_category";
+        $colManualCutIn = in_array('manual_cut_in_first_mo', $trackingCols, true) ? 'et.manual_cut_in_first_mo' : "NULL AS manual_cut_in_first_mo";
+        $colTypeChanges = in_array('type_of_changes', $trackingCols, true) ? 'et.type_of_changes' : "NULL AS type_of_changes";
         $colPmcComp     = in_array('pmc_result_completed', $trackingCols, true) ? 'et.pmc_result_completed' : (in_array('pme_result_completed', $trackingCols, true) ? 'et.pme_result_completed AS pmc_result_completed' : "0 AS pmc_result_completed");
         $colQaComp      = in_array('qa_result_completed', $trackingCols, true) ? 'et.qa_result_completed' : "0 AS qa_result_completed";
         $colFirstMo     = in_array('first_mo_result', $trackingCols, true) ? 'et.first_mo_result' : "NULL AS first_mo_result";
@@ -135,14 +132,11 @@ if ($pdo) {
                 {$colMonth},
                 {$colSignStatus},
                 {$colPrevStatus},
-                {$colSignUser},
-                {$colSignRole},
-                {$colSignDate},
                 {$colStatusChg},
                 {$colStatusChgAt},
                 {$colIsUnmatched},
-                {$colRework},
-                {$colEcrCat},
+                {$colManualCutIn},
+                {$colTypeChanges},
                 {$colPmcComp},
                 {$colQaComp},
                 {$colFirstMo},
@@ -653,20 +647,17 @@ if ($pdo) {
                                         <div class="detail-field"><span class="label">WIP Action:</span> <span class="val"><?= dash($r['wip_action']) ?></span></div>
                                         <div class="detail-field"><span class="label">FG Action:</span> <span class="val"><?= dash($r['fg_action']) ?></span></div>
                                         <div class="detail-field"><span class="label">Warehouse Action:</span> <span class="val"><?= dash($r['warehouse_action']) ?></span></div>
-                                        <div class="detail-field"><span class="label">Signoff User:</span> <span class="val"><?= dash($r['signoff_user']) ?></span></div>
-                                        <div class="detail-field"><span class="label">Signoff Role:</span> <span class="val"><?= dash($r['signoff_role']) ?></span></div>
-                                        <div class="detail-field"><span class="label">Signoff Date:</span> <span class="val"><?= dash($r['signoff_date']) ?></span></div>
                                         <?php if (!empty($r['status_changed_at'])): ?>
                                             <div class="detail-field"><span class="label">Status Changed:</span> <span class="val" style="color:#7c3aed;"><?= h($r['previous_internal_status']) ?> → <?= h($r['signoff_status']) ?> (<?= h($r['status_changed_at']) ?>)</span></div>
                                         <?php endif; ?>
                                     </div>
 
                                     <!-- Section 3: User Manual Tracking -->
-                                    <div class="detail-section">
+                                    <div class="detail-section manual-tracking-details">
                                         <div class="detail-title">Manual Tracking Details</div>
+                                        <div class="detail-field"><span class="label">Cut In 1st M/O (Manual):</span> <span class="val val-manual-cut-in"><?= dash($r['manual_cut_in_first_mo']) ?></span></div>
                                         <div class="detail-field"><span class="label">First M/O Result:</span> <span class="val val-first-mo"><?= dash($r['first_mo_result']) ?></span></div>
-                                        <div class="detail-field"><span class="label">Rework Need:</span> <span class="val val-rework"><?= dash($r['rework_need']) ?></span></div>
-                                        <div class="detail-field"><span class="label">ECR Category:</span> <span class="val val-category"><?= dash($r['ecr_category']) ?></span></div>
+                                        <div class="detail-field"><span class="label">Type of Changes:</span> <span class="val val-type-changes"><?= dash($r['type_of_changes']) ?></span></div>
                                         <div class="detail-field"><span class="label">Pending Checklist:</span> <span class="val val-pending"><?= dash($r['pending_checklist']) ?></span></div>
                                         <div class="detail-field"><span class="label">Impact Checklist:</span> <span class="val val-impact"><?= dash($r['impact_assessment_checklist']) ?></span></div>
                                         <div class="detail-field" style="margin-top:10px; font-size:11.5px; color:#64748b;">
@@ -696,18 +687,18 @@ if ($pdo) {
             <input type="hidden" name="eco_no" id="formEcoNo">
             <div class="modal-body">
                 <div class="form-group">
+                    <label for="formManualCutInFirstMo">Cut In 1st M/O (Manual)</label>
+                    <textarea id="formManualCutInFirstMo" name="manual_cut_in_first_mo" class="form-control" placeholder="Enter the manual cut-in first M/O"></textarea>
+                </div>
+
+                <div class="form-group">
                     <label for="formFirstMoResult">First M/O Result</label>
                     <input type="text" id="formFirstMoResult" name="first_mo_result" class="form-control" placeholder="e.g. Passed / Pending verification">
                 </div>
 
                 <div class="form-group">
-                    <label for="formReworkNeed">Rework Need</label>
-                    <textarea id="formReworkNeed" name="rework_need" class="form-control" placeholder="Describe rework requirements, supplier confirmation, etc."></textarea>
-                </div>
-
-                <div class="form-group">
-                    <label for="formEcrCategory">ECR Category</label>
-                    <input type="text" id="formEcrCategory" name="ecr_category" class="form-control" placeholder="e.g. Alternative Part, Design Change, Component Obsolescence">
+                    <label for="formTypeOfChanges">Type of Changes</label>
+                    <input type="text" id="formTypeOfChanges" name="type_of_changes" class="form-control" placeholder="e.g. Alternative Part, Design Change, Component Obsolescence">
                 </div>
 
                 <div class="form-group">
@@ -755,7 +746,7 @@ if ($pdo) {
                 <div class="form-group">
                     <label for="uploadSignoffFile">2. User Signoff File (.xls, .xlsx) <span style="color:#0284c7;">(Optional / Recommended)</span></label>
                     <input type="file" id="uploadSignoffFile" name="signoff_file" class="form-control" accept=".xls,.xlsx,.csv">
-                    <span style="font-size:11.5px; color:#64748b;">Expected columns: Change Number, Status, User Name</span>
+                    <span style="font-size:11.5px; color:#64748b;">Expected columns: Change Number, Status</span>
                 </div>
 
                 <div class="form-group">

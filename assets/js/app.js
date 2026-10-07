@@ -192,8 +192,8 @@ document.addEventListener('DOMContentLoaded', function () {
             .then(data => {
                 if (data.success && data.eco) {
                     const e = data.eco;
-                    document.getElementById('formReworkNeed').value = e.rework_need || '';
-                    document.getElementById('formEcrCategory').value = e.ecr_category || '';
+                    document.getElementById('formManualCutInFirstMo').value = e.manual_cut_in_first_mo || '';
+                    document.getElementById('formTypeOfChanges').value = e.type_of_changes || '';
                     document.getElementById('formFirstMoResult').value = e.first_mo_result || '';
                     document.getElementById('formImpactChecklist').value = e.impact_assessment_checklist || '';
                     document.getElementById('formPendingChecklist').value = e.pending_checklist || '';
@@ -246,11 +246,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     // Update values in expanded accordion view if rendered
                     const detailRow = document.getElementById(`detail-${ecoNo}`);
                     if (detailRow) {
-                        const reworkVal = detailRow.querySelector('.val-rework');
-                        if (reworkVal) reworkVal.textContent = document.getElementById('formReworkNeed').value || '—';
+                        const manualCutInVal = detailRow.querySelector('.val-manual-cut-in');
+                        if (manualCutInVal) manualCutInVal.textContent = document.getElementById('formManualCutInFirstMo').value || '—';
                         
-                        const catVal = detailRow.querySelector('.val-category');
-                        if (catVal) catVal.textContent = document.getElementById('formEcrCategory').value || '—';
+                        const typeChangesVal = detailRow.querySelector('.val-type-changes');
+                        if (typeChangesVal) typeChangesVal.textContent = document.getElementById('formTypeOfChanges').value || '—';
 
                         const moVal = detailRow.querySelector('.val-first-mo');
                         if (moVal) moVal.textContent = document.getElementById('formFirstMoResult').value || '—';

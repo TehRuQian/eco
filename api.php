@@ -174,8 +174,8 @@ try {
                 jsonResponse(['success' => false, 'message' => 'ECO number is required.'], 400);
             }
 
-            $reworkNeed        = ECOProcessor::cleanText($_POST['rework_need'] ?? null);
-            $ecrCategory       = ECOProcessor::cleanText($_POST['ecr_category'] ?? null);
+            $manualCutInFirstMo = ECOProcessor::cleanText($_POST['manual_cut_in_first_mo'] ?? null);
+            $typeOfChanges      = ECOProcessor::cleanText($_POST['type_of_changes'] ?? null);
             $firstMoResult     = ECOProcessor::cleanText($_POST['first_mo_result'] ?? null);
             $impactChecklist   = ECOProcessor::cleanText($_POST['impact_assessment_checklist'] ?? null);
             $pendingChecklist  = ECOProcessor::cleanText($_POST['pending_checklist'] ?? null);
@@ -184,14 +184,14 @@ try {
             // Upsert tracking row
             $sql = "
                 INSERT INTO eco_tracking (
-                    eco_no, rework_need, ecr_category, first_mo_result,
+                    eco_no, manual_cut_in_first_mo, type_of_changes, first_mo_result,
                     impact_assessment_checklist, pending_checklist, updated_by
                 ) VALUES (
                     ?, ?, ?, ?,
                     ?, ?, ?
                 ) ON DUPLICATE KEY UPDATE
-                    rework_need = VALUES(rework_need),
-                    ecr_category = VALUES(ecr_category),
+                    manual_cut_in_first_mo = VALUES(manual_cut_in_first_mo),
+                    type_of_changes = VALUES(type_of_changes),
                     first_mo_result = VALUES(first_mo_result),
                     impact_assessment_checklist = VALUES(impact_assessment_checklist),
                     pending_checklist = VALUES(pending_checklist),
@@ -201,8 +201,8 @@ try {
             $stmt = $pdo->prepare($sql);
             $stmt->execute([
                 $ecoNo,
-                $reworkNeed ?: null,
-                $ecrCategory ?: null,
+                $manualCutInFirstMo ?: null,
+                $typeOfChanges ?: null,
                 $firstMoResult ?: null,
                 $impactChecklist ?: null,
                 $pendingChecklist ?: null,
@@ -228,10 +228,9 @@ try {
             $sql = "
                 SELECT
                     em.*,
-                    es.internal_status, es.previous_internal_status, es.user_name as signoff_user,
-                    es.user_role as signoff_role, es.status_entry_date as signoff_date,
+                    es.internal_status, es.previous_internal_status,
                     es.status_changed, es.status_changed_at, es.is_unmatched,
-                    et.rework_need, et.ecr_category, et.pmc_result_completed, et.qa_result_completed,
+                    et.manual_cut_in_first_mo, et.type_of_changes, et.pmc_result_completed, et.qa_result_completed,
                     et.first_mo_result, et.due_date, et.status_progress,
                     et.impact_assessment_checklist, et.pending_checklist, et.updated_by, et.updated_date
                 FROM eco_master em

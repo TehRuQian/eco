@@ -62,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $rows = $spreadsheet->getActiveSheet()->toArray(null, true, true, false);
             $spreadsheet->disconnectWorksheets();
 
-            $requiredHeaders = ['change number', 'status', 'user name'];
+            $requiredHeaders = ['change number', 'status'];
             $headerMap = [];
             $headerRowIndex = null;
 
@@ -92,21 +92,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $ecoNo = trim((string)($row[$headerMap['change number']] ?? ''));
                 $internalStatus = trim((string)($row[$headerMap['status']] ?? ''));
-                $userName = trim((string)($row[$headerMap['user name']] ?? ''));
 
                 if ($ecoNo === '') {
                     continue;
                 }
 
                 $excelRow = $rowIndex + 1;
-                if ($ecoNo === '' || $internalStatus === '' || $userName === '') {
-                    $invalidRows[] = "Row {$excelRow}: Change Number, Status, and User Name are required.";
+                if ($ecoNo === '' || $internalStatus === '') {
+                    $invalidRows[] = "Row {$excelRow}: Change Number and Status are required.";
                     continue;
                 }
                 $validRows[] = [
                     'eco_no' => $ecoNo,
                     'internal_status' => $internalStatus,
-                    'user_name' => $userName,
                 ];
             }
 
@@ -116,12 +114,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $findEco = $pdo->prepare('SELECT 1 FROM eco_master WHERE eco_no = ? LIMIT 1');
                 $findDuplicate = $pdo->prepare(
                     'SELECT 1 FROM eco_signoff
-                     WHERE eco_no = ? AND internal_status = ? AND user_name = ?
+                     WHERE eco_no = ? AND internal_status = ?
                      LIMIT 1'
                 );
                 $insert = $pdo->prepare(
-                    'INSERT INTO eco_signoff (eco_no, internal_status, user_name)
-                     VALUES (?, ?, ?)'
+                    'INSERT INTO eco_signoff (eco_no, internal_status)
+                     VALUES (?, ?)'
                 );
 
                 $inserted = 0;
@@ -140,7 +138,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $values = [
                             $record['eco_no'],
                             $record['internal_status'],
-                            $record['user_name'],
                         ];
                         $findDuplicate->execute($values);
                         if ($findDuplicate->fetchColumn()) {
@@ -206,8 +203,7 @@ ul{margin-bottom:0}
         <h1>Upload User Signoff Report</h1>
         <p>Select the Oracle User Signoff report. Supported formats are .xls and .xlsx.</p>
         <div class="notice">
-            Imported fields are Change Number, Status, and User Name. The current
-            eco_signoff table has no columns for User Role or report dates, so those fields are not stored.
+            Imported fields are Change Number and Status.
             Rows whose ECO number is not in eco_master are skipped. Exact repeats are not inserted again.
         </div>
 
