@@ -462,7 +462,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const subject = (row.getAttribute('data-subject') || '').toLowerCase();
             const customer = row.getAttribute('data-customer') || '';
             const project = row.getAttribute('data-project') || '';
-            const agile = row.getAttribute('data-agile-status') || '';
+            const agile = (row.getAttribute('data-agile-status') || '').trim().toLowerCase();
             const tracker = row.getAttribute('data-tracker-status') || '';
             const pmc = row.getAttribute('data-pmc-completed') || '0';
             const qa = row.getAttribute('data-qa-completed') || '0';
@@ -479,7 +479,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             const matchesCust = !cust || customer === cust;
             const matchesProj = !proj || project === proj;
-            const matchesAgile = !agileSt || agile === agileSt;
+            const matchesAgile = !agileSt || agile === agileSt.trim().toLowerCase();
             const matchesTracker = !trackSt || tracker === trackSt;
             const matchesPmc = pmcComp === '' || pmc === pmcComp;
             const matchesQa = qaComp === '' || qa === qaComp;
@@ -550,40 +550,42 @@ document.addEventListener('DOMContentLoaded', function () {
         if (filterWw) filterWw.value = '';
     }
 
-    document.querySelectorAll('.kpi-card').forEach(card => {
-        card.addEventListener('click', function () {
-            const filterKey = this.getAttribute('data-filter');
-            document.querySelectorAll('.kpi-card').forEach(c => c.classList.remove('active'));
+    document.addEventListener('click', function (event) {
+        if (!(event.target instanceof Element)) return;
+        const card = event.target.closest('.kpi-card[data-filter]');
+        if (!card) return;
 
-            const hadKpiAgileStatus = !!kpiAgileStatus;
-            kpiAgileStatus = '';
-            if (hadKpiAgileStatus && filterAgileStatus) filterAgileStatus.value = '';
-            if (!filterKey || filterKey === 'all') {
-                if (filterTrackerStatus) filterTrackerStatus.value = '';
-                if (filterAgileStatus) filterAgileStatus.value = '';
-                applyFilters();
-                return;
-            }
+        const filterKey = card.getAttribute('data-filter');
+        document.querySelectorAll('.kpi-card').forEach(c => c.classList.remove('active'));
 
-            this.classList.add('active');
-
-            if (filterKey === 'pending_pmc' && filterTrackerStatus) {
-                filterTrackerStatus.value = 'Pending PMC';
-            } else if (filterKey === 'pending_qa' && filterTrackerStatus) {
-                filterTrackerStatus.value = 'Pending QA';
-            } else if (filterKey === 'completed' && filterTrackerStatus) {
-                filterTrackerStatus.value = 'Completed';
-            } else if (filterKey === 'agile_open') {
-                clearNonAgileFilters();
-                kpiAgileStatus = 'Open';
-                if (filterAgileStatus) filterAgileStatus.value = 'Open';
-            } else if (filterKey === 'agile_closed') {
-                clearNonAgileFilters();
-                kpiAgileStatus = 'Closed';
-                if (filterAgileStatus) filterAgileStatus.value = 'Closed';
-            }
+        const hadKpiAgileStatus = !!kpiAgileStatus;
+        kpiAgileStatus = '';
+        if (hadKpiAgileStatus && filterAgileStatus) filterAgileStatus.value = '';
+        if (!filterKey || filterKey === 'all') {
+            if (filterTrackerStatus) filterTrackerStatus.value = '';
+            if (filterAgileStatus) filterAgileStatus.value = '';
             applyFilters();
-        });
+            return;
+        }
+
+        card.classList.add('active');
+
+        if (filterKey === 'pending_pmc' && filterTrackerStatus) {
+            filterTrackerStatus.value = 'Pending PMC';
+        } else if (filterKey === 'pending_qa' && filterTrackerStatus) {
+            filterTrackerStatus.value = 'Pending QA';
+        } else if (filterKey === 'completed' && filterTrackerStatus) {
+            filterTrackerStatus.value = 'Completed';
+        } else if (filterKey === 'agile_open') {
+            clearNonAgileFilters();
+            kpiAgileStatus = 'Open';
+            if (filterAgileStatus) filterAgileStatus.value = 'Open';
+        } else if (filterKey === 'agile_closed') {
+            clearNonAgileFilters();
+            kpiAgileStatus = 'Closed';
+            if (filterAgileStatus) filterAgileStatus.value = 'Closed';
+        }
+        applyFilters();
     });
 
     // -------------------------------------------------------------

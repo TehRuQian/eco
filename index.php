@@ -83,7 +83,6 @@ if ($pdo) {
         $colSignStatus  = in_array('internal_status', $signoffCols, true) ? 'es.internal_status AS signoff_status' : "NULL AS signoff_status";
         $colPrevStatus  = in_array('previous_internal_status', $signoffCols, true) ? 'es.previous_internal_status' : "NULL AS previous_internal_status";
         $colSignUser    = in_array('user_name', $signoffCols, true) ? 'es.user_name AS signoff_user' : "NULL AS signoff_user";
-        $colSignDur     = in_array('signoff_duration', $signoffCols, true) ? 'es.signoff_duration' : "NULL AS signoff_duration";
         $colSignRole    = in_array('user_role', $signoffCols, true) ? 'es.user_role AS signoff_role' : "NULL AS signoff_role";
         $colSignDate    = in_array('status_entry_date', $signoffCols, true) ? 'es.status_entry_date AS signoff_date' : "NULL AS signoff_date";
         $colStatusChg   = in_array('status_changed', $signoffCols, true) ? 'es.status_changed' : "0 AS status_changed";
@@ -137,7 +136,6 @@ if ($pdo) {
                 {$colSignStatus},
                 {$colPrevStatus},
                 {$colSignUser},
-                {$colSignDur},
                 {$colSignRole},
                 {$colSignDate},
                 {$colStatusChg},
@@ -496,6 +494,8 @@ if ($pdo) {
                             $isOverdue = (!empty($r['due_date']) && $r['due_date'] < $today && $trackerStatus !== 'Completed');
                             $hasChanged = !empty($r['status_changed']);
                             $masterStatus = ECOProcessor::cleanStatus((string)($r['cleaned_status'] ?? ''));
+                            $signoffStatus = ECOProcessor::cleanStatus((string)($r['signoff_status'] ?? ''));
+                            $currentStatus = $signoffStatus !== '' ? $signoffStatus : $masterStatus;
                             $agileStatus = ECOProcessor::statusToAgileStatus($masterStatus);
                             $agileUpper = strtoupper($agileStatus);
                         ?>
@@ -552,7 +552,7 @@ if ($pdo) {
 
                             <!-- ECO Status -->
                             <td>
-                                <span class="badge badge-neutral"><?= dash($masterStatus) ?></span>
+                                <span class="badge badge-neutral"><?= dash($currentStatus) ?></span>
                             </td>
 
                             <!-- Status in Agile -->
@@ -755,7 +755,7 @@ if ($pdo) {
                 <div class="form-group">
                     <label for="uploadSignoffFile">2. User Signoff File (.xls, .xlsx) <span style="color:#0284c7;">(Optional / Recommended)</span></label>
                     <input type="file" id="uploadSignoffFile" name="signoff_file" class="form-control" accept=".xls,.xlsx,.csv">
-                    <span style="font-size:11.5px; color:#64748b;">Expected columns: Change Number, Status, User Name, Signoff Duration</span>
+                    <span style="font-size:11.5px; color:#64748b;">Expected columns: Change Number, Status, User Name</span>
                 </div>
 
                 <div class="form-group">
@@ -776,6 +776,6 @@ if ($pdo) {
     </div>
 </div>
 
-<script src="assets/js/app.js"></script>
+<script src="assets/js/app.js?v=<?= (int)filemtime(__DIR__ . '/assets/js/app.js') ?>"></script>
 </body>
 </html>

@@ -26,7 +26,6 @@ ALTER TABLE `eco_signoff`
     ADD COLUMN IF NOT EXISTS `internal_status` VARCHAR(100) NULL,
     ADD COLUMN IF NOT EXISTS `previous_internal_status` VARCHAR(100) NULL,
     ADD COLUMN IF NOT EXISTS `user_name` VARCHAR(150) NULL,
-    ADD COLUMN IF NOT EXISTS `signoff_duration` DECIMAL(10, 2) NULL,
     ADD COLUMN IF NOT EXISTS `user_role` VARCHAR(100) NULL,
     ADD COLUMN IF NOT EXISTS `status_entry_date` DATETIME NULL,
     ADD COLUMN IF NOT EXISTS `status_changed` TINYINT(1) NOT NULL DEFAULT 0,

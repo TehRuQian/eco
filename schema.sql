@@ -52,7 +52,6 @@ CREATE TABLE IF NOT EXISTS `eco_signoff` (
     `internal_status`            VARCHAR(100) NULL COMMENT 'Current signoff status',
     `previous_internal_status`   VARCHAR(100) NULL COMMENT 'Previous imported status',
     `user_name`                  VARCHAR(150) NULL,
-    `signoff_duration`           DECIMAL(10, 2) NULL,
     `user_role`                  VARCHAR(100) NULL,
     `status_entry_date`          DATETIME NULL,
     `status_changed`             TINYINT(1) NOT NULL DEFAULT 0 COMMENT '1 if status change detected',

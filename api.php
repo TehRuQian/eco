@@ -229,7 +229,7 @@ try {
                 SELECT
                     em.*,
                     es.internal_status, es.previous_internal_status, es.user_name as signoff_user,
-                    es.signoff_duration, es.user_role as signoff_role, es.status_entry_date as signoff_date,
+                    es.user_role as signoff_role, es.status_entry_date as signoff_date,
                     es.status_changed, es.status_changed_at, es.is_unmatched,
                     et.rework_need, et.ecr_category, et.pmc_result_completed, et.qa_result_completed,
                     et.first_mo_result, et.due_date, et.status_progress,

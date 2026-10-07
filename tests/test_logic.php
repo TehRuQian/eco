@@ -23,6 +23,9 @@ assertEq(ECOProcessor::normalizeEcoNo(" eco001 "), "ECO001", "1.1 Normalization 
 assertEq(ECOProcessor::normalizeEcoNo("Eco001"), "ECO001", "1.2 Normalization of mixed case");
 assertEq(ECOProcessor::normalizeEcoNo("ECO001"), "ECO001", "1.3 Normalization of clean uppercase");
 assertEq(ECOProcessor::normalizeEcoNo("  ECO-999-X  "), "ECO-999-X", "1.4 Normalization with hyphens");
+assertEq(ECOProcessor::isEcoNumber(" eco001 "), true, "1.5 ECO-prefixed value is a valid ECO number");
+assertEq(ECOProcessor::isEcoNumber("CREATED BY"), false, "1.6 CREATED BY metadata is ignored");
+assertEq(ECOProcessor::isEcoNumber("Create Time"), false, "1.7 Create Time metadata is ignored");
 
 // 2. Status Cleaning (Removing '# No Controller')
 assertEq(ECOProcessor::cleanStatus("In Progress # No Controller"), "In Progress", "2.1 Remove '# No Controller' from In Progress");

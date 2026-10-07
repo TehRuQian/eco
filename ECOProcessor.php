@@ -12,7 +12,7 @@
  * 6. Thursday-based work week (WW) calculation
  * 7. Due date calculation (Originated Date + 14 calendar days)
  * 8. Status change detection (previous_internal_status vs internal_status)
- * 9. Skips signoff records without a matching ECO master record
+ * 9. Creates ECO records for unmatched signoff entries
  * 10. Manual tracking data preservation on re-import
  * 11. Transaction integrity (all-or-nothing rollback)
  */
@@ -117,7 +117,6 @@ class ECOProcessor
                         `internal_status` VARCHAR(100) NULL,
                         `previous_internal_status` VARCHAR(100) NULL,
                         `user_name` VARCHAR(150) NULL,
-                        `signoff_duration` DECIMAL(10, 2) NULL,
                         `user_role` VARCHAR(100) NULL,
                         `status_entry_date` DATETIME NULL,
                         `status_changed` TINYINT(1) NOT NULL DEFAULT 0,
@@ -134,7 +133,6 @@ class ECOProcessor
                 'internal_status'          => "VARCHAR(100) NULL",
                 'previous_internal_status' => "VARCHAR(100) NULL",
                 'user_name'                => "VARCHAR(150) NULL",
-                'signoff_duration'         => "DECIMAL(10, 2) NULL",
                 'user_role'                => "VARCHAR(100) NULL",
                 'status_entry_date'        => "DATETIME NULL",
                 'status_changed'           => "TINYINT(1) NOT NULL DEFAULT 0",
@@ -250,6 +248,14 @@ class ECOProcessor
     public static function normalizeEcoNo(?string $ecoNo): string
     {
         return strtoupper(self::cleanText($ecoNo));
+    }
+
+    /**
+     * Only actual ECO identifiers are eligible for import.
+     */
+    public static function isEcoNumber(?string $ecoNo): bool
+    {
+        return str_starts_with(self::normalizeEcoNo($ecoNo), 'ECO');
     }
 
     /**
@@ -551,12 +557,11 @@ class ECOProcessor
             'eco_no'             => ['change number', 'change no', 'eco no', 'eco number', 'change_number'],
             'internal_status'    => ['status', 'internal status', 'signoff status'],
             'user_name'          => ['user name', 'username', 'approver', 'signoff user'],
-            'signoff_duration'   => ['signoff duration', 'duration', 'signoff duration (hours)'],
             'user_role'          => ['user role', 'role'],
             'status_entry_date'  => ['status entry date', 'entry date', 'signoff date']
         ];
 
-        $requiredSignoff = ['eco_no', 'internal_status', 'user_name', 'signoff_duration'];
+        $requiredSignoff = ['eco_no', 'internal_status', 'user_name'];
         $signoffFound = [];
 
         if ($signoffPath && file_exists($signoffPath)) {
@@ -572,7 +577,7 @@ class ECOProcessor
                     foreach ($requiredSignoff as $req) {
                         if (!isset($signoffFound[$req])) {
                             $readable = ucwords(str_replace('_', ' ', $req));
-                            $errors[] = "user_signoff missing required column: '{$readable}' (e.g. Change Number, Status, User Name, Signoff Duration).";
+                            $errors[] = "user_signoff missing required column: '{$readable}' (e.g. Change Number, Status, User Name).";
                         }
                     }
 
@@ -634,7 +639,7 @@ class ECOProcessor
 
             $rawEco = $row[$masterMap['eco_no']] ?? null;
             $ecoNo  = self::normalizeEcoNo($rawEco);
-            if ($ecoNo === '') continue;
+            if (!self::isEcoNumber($ecoNo)) continue;
 
             // Dates & Derived WW/Due Date
             $rawOriginated = $row[$masterMap['originated_date']] ?? null;
@@ -699,13 +704,11 @@ class ECOProcessor
 
                 $rawEco = $row[$signoffMap['eco_no']] ?? null;
                 $ecoNo  = self::normalizeEcoNo($rawEco);
-                if ($ecoNo === '') continue;
+                if (!self::isEcoNumber($ecoNo)) continue;
 
                 $rawInternalStatus = (string)($row[$signoffMap['internal_status']] ?? '');
                 $internalStatus    = self::cleanStatus($rawInternalStatus);
                 $userName          = self::cleanText((string)($row[$signoffMap['user_name']] ?? ''));
-                $durationVal       = $row[$signoffMap['signoff_duration']] ?? null;
-                $duration          = is_numeric($durationVal) ? (float)$durationVal : 0.0;
 
                 $userRole = isset($signoffMap['user_role']) ? self::cleanText((string)($row[$signoffMap['user_role']] ?? '')) : null;
                 $rawEntry = isset($signoffMap['status_entry_date']) ? ($row[$signoffMap['status_entry_date']] ?? null) : null;
@@ -716,7 +719,6 @@ class ECOProcessor
                     'eco_no'             => $ecoNo,
                     'internal_status'    => $internalStatus,
                     'user_name'          => $userName,
-                    'signoff_duration'   => $duration,
                     'user_role'          => $userRole,
                     'status_entry_date'  => $dtEntry ? $dtEntry->format('Y-m-d H:i:s') : null,
                 ];
@@ -860,11 +862,17 @@ class ECOProcessor
                 }
             }
 
+            // Resolve signoff-only records when their SearchResult data arrives.
+            if (in_array('is_unmatched', $signoffCols, true)) {
+                $resolveUnmatched = $this->pdo->prepare("UPDATE `eco_signoff` SET `is_unmatched` = 0 WHERE `eco_no` = ?");
+                foreach (array_keys($masterData) as $ecoNo) {
+                    $resolveUnmatched->execute([$ecoNo]);
+                }
+            }
+
             // 2. Process Signoff Data
             if (!empty($signoffCols) && $stmtGetSignoff) {
                 foreach ($signoffData as $ecoNo => $s) {
-                    // eco_signoff.eco_no references eco_master.eco_no, so unmatched rows
-                    // cannot be stored while the foreign key constraint is enabled.
                     $isMatched = isset($masterData[$ecoNo]);
                     if (!$isMatched) {
                         $stmtCheckMaster->execute([$ecoNo]);
@@ -872,12 +880,38 @@ class ECOProcessor
                     }
 
                     if (!$isMatched) {
-                        $stats['unmatched_signoff']++;
-                        continue;
+                        // Create the parent before signoff/tracking to satisfy foreign keys.
+                        // Unknown SearchResult fields remain NULL until a master import.
+                        $newMaster = array_filter([
+                            'eco_no' => $ecoNo,
+                            'status' => $s['internal_status'],
+                            'status_in_agile' => self::statusToAgileStatus($s['internal_status']),
+                        ], fn($k) => in_array($k, $masterCols, true), ARRAY_FILTER_USE_KEY);
+                        $columns = '`' . implode('`, `', array_keys($newMaster)) . '`';
+                        $holders = implode(', ', array_fill(0, count($newMaster), '?'));
+                        $this->pdo->prepare("INSERT INTO `eco_master` ({$columns}) VALUES ({$holders})")
+                            ->execute(array_values($newMaster));
+                        $stats['master_inserted']++;
+
+                        if (!empty($trackingCols)) {
+                            $newTracking = array_filter([
+                                'eco_no' => $ecoNo,
+                                'status_progress' => 'Pending PMC',
+                                'updated_by' => $importedBy,
+                            ], fn($k) => in_array($k, $trackingCols, true), ARRAY_FILTER_USE_KEY);
+                            $columns = '`' . implode('`, `', array_keys($newTracking)) . '`';
+                            $holders = implode(', ', array_fill(0, count($newTracking), '?'));
+                            $this->pdo->prepare("INSERT INTO `eco_tracking` ({$columns}) VALUES ({$holders})")
+                                ->execute(array_values($newTracking));
+                            $stats['tracking_created']++;
+                        }
                     }
 
                     $stmtGetSignoff->execute([$ecoNo]);
                     $prevRecord = $stmtGetSignoff->fetch();
+                    $isUnmatched = !isset($masterData[$ecoNo]) &&
+                        (!$isMatched || !empty($prevRecord['is_unmatched']));
+                    if ($isUnmatched) $stats['unmatched_signoff']++;
 
                     $oldStatus = $prevRecord ? ($prevRecord['internal_status'] ?? '') : null;
                     $newStatus = $s['internal_status'];
@@ -904,12 +938,11 @@ class ECOProcessor
                         'internal_status'          => $newStatus,
                         'previous_internal_status' => $prevStatusVal,
                         'user_name'                => $s['user_name'],
-                        'signoff_duration'         => $s['signoff_duration'],
                         'user_role'                => $s['user_role'],
                         'status_entry_date'        => $s['status_entry_date'],
                         'status_changed'           => $statusChanged,
                         'status_changed_at'        => $statusChangedAt,
-                        'is_unmatched'             => 0,
+                        'is_unmatched'             => (int)$isUnmatched,
                     ];
 
                     $filteredSign = array_filter(
@@ -948,7 +981,7 @@ class ECOProcessor
                 'success' => true,
                 'stats'   => $stats,
                 'message' => sprintf(
-                    "Import successful! Master: %d inserted, %d updated. Tracking: %d new, %d preserved. Signoff: %d processed (%d changed, %d unmatched skipped).",
+                    "Import successful! Master: %d inserted, %d updated. Tracking: %d new, %d preserved. Signoff: %d processed (%d changed, %d unmatched retained).",
                     $stats['master_inserted'],
                     $stats['master_updated'],
                     $stats['tracking_created'],

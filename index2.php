@@ -20,7 +20,7 @@ if (isset($_GET['action'])) {
 
     /* ---------------- UPLOAD & VALIDATE ---------------- */
     if ($action === 'upload') {
-        $requiredCols = ['Change Number','Status','Status Entry Date','User Name','User Role','User Add Date','Signoff Date','Signoff Duration'];
+        $requiredCols = ['Change Number','Status','Status Entry Date','User Name','User Role','User Add Date','Signoff Date'];
         $log = [];
         $allRows = [];
         $ok = true;
@@ -100,7 +100,6 @@ if (isset($_GET['action'])) {
                     'user_role'         => trim((string)($row[$headerMap['User Role']] ?? '')),
                     'user_add_date'     => trim((string)($row[$headerMap['User Add Date']] ?? '')),
                     'signoff_date'      => trim((string)($row[$headerMap['Signoff Date']] ?? '')),
-                    'signoff_duration'  => trim((string)($row[$headerMap['Signoff Duration']] ?? '')),
                 ];
             }
 
@@ -280,8 +279,8 @@ if (isset($_GET['action'])) {
         // Save all signoff detail rows (matched + new + mismatched all included)
         foreach ($signoffRows as $r) {
             $stmt = $pdo->prepare("INSERT INTO signoff_details
-                (eco_no, status, status_entry_date, user_name, user_role, user_add_date, signoff_date, signoff_duration)
-                VALUES (:eco_no, :status, :status_entry_date, :user_name, :user_role, :user_add_date, :signoff_date, :signoff_duration)");
+                (eco_no, status, status_entry_date, user_name, user_role, user_add_date, signoff_date)
+                VALUES (:eco_no, :status, :status_entry_date, :user_name, :user_role, :user_add_date, :signoff_date)");
             $stmt->execute([
                 ':eco_no' => $r['eco_no'],
                 ':status' => $r['status'],
@@ -290,7 +289,6 @@ if (isset($_GET['action'])) {
                 ':user_role' => $r['user_role'],
                 ':user_add_date' => $r['user_add_date'] ? date('Y-m-d', strtotime(str_replace('/','-',$r['user_add_date']))) : null,
                 ':signoff_date' => $r['signoff_date'] ? date('Y-m-d', strtotime(str_replace('/','-',$r['signoff_date']))) : null,
-                ':signoff_duration' => is_numeric($r['signoff_duration']) ? $r['signoff_duration'] : null,
             ]);
         }
 
@@ -527,7 +525,7 @@ $completeCount = count(array_filter($records, fn($r) => $r['status'] === 'Comple
             </div>
             <div class="uploaded-files-list" id="uploadedFilesList"></div>
             <div class="req-columns" style="margin-top:15px;">
-                <b>Required file:</b> user_signoff file with columns: Change Number, Status, Status Entry Date, User Name, User Role, User Add Date, Signoff Date, Signoff Duration
+                <b>Required file:</b> user_signoff file with columns: Change Number, Status, Status Entry Date, User Name, User Role, User Add Date, Signoff Date
             </div>
             <div class="actions-row">
                 <button class="btn" id="btnValidate" disabled onclick="goToStep2()">Validate Files</button>
