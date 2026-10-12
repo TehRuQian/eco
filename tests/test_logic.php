@@ -31,6 +31,8 @@ assertEq(ECOProcessor::isEcoNumber("Create Time"), false, "1.7 Create Time metad
 assertEq(ECOProcessor::cleanStatus("In Progress # No Controller"), "In Progress", "2.1 Remove '# No Controller' from In Progress");
 assertEq(ECOProcessor::cleanStatus("Closed # No Controller"), "Closed", "2.2 Remove '# No Controller' from Closed");
 assertEq(ECOProcessor::cleanStatus("Open"), "Open", "2.3 Status without '# No Controller' remains unchanged");
+assertEq(ECOProcessor::cleanStatus("Reviewer 2 #No Controller"), "Reviewer 2", "Remove controller suffix without a space after hash");
+assertEq(ECOProcessor::cleanStatus("#No Controller"), "", "Remove standalone controller marker");
 assertEq(ECOProcessor::statusToAgileStatus("Complete"), "Closed", "2.4 Complete reviewer status maps to Agile Closed");
 assertEq(ECOProcessor::statusToAgileStatus("complete # No Controller"), "Closed", "2.5 Complete status with controller suffix maps to Agile Closed");
 assertEq(ECOProcessor::statusToAgileStatus("Reviewer 1"), "Open", "2.6 Non-complete reviewer status maps to Agile Open");

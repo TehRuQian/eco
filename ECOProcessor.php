@@ -258,7 +258,7 @@ class ECOProcessor
      */
     public static function cleanStatus(?string $rawStatus): string
     {
-        $cleaned = str_ireplace('# No Controller', '', (string)$rawStatus);
+        $cleaned = preg_replace('/#\s*No\s+Controller\b/iu', '', self::cleanText($rawStatus));
         return self::cleanText($cleaned);
     }
 

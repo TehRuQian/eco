@@ -6,6 +6,7 @@ ini_set('log_errors', '1');
 session_start();
 require __DIR__ . '/db.php';
 require __DIR__ . '/vendor/autoload.php';
+require_once __DIR__ . '/ECOProcessor.php';
 
 use PhpOffice\PhpSpreadsheet\IOFactory;
 
@@ -91,7 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
 
                 $ecoNo = trim((string)($row[$headerMap['change number']] ?? ''));
-                $internalStatus = trim((string)($row[$headerMap['status']] ?? ''));
+                $internalStatus = ECOProcessor::cleanStatus((string)($row[$headerMap['status']] ?? ''));
 
                 if ($ecoNo === '') {
                     continue;
