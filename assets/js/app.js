@@ -47,16 +47,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     document.getElementById('kpiTotalEco').textContent = s.total_eco;
                     document.getElementById('kpiAgileOpen').textContent = s.agile_open;
                     document.getElementById('kpiAgileClosed').textContent = s.agile_closed;
-                    document.getElementById('kpiPendingPmc').textContent = s.pending_pmc;
-                    document.getElementById('kpiPendingQa').textContent = s.pending_qa;
-                    document.getElementById('kpiCompleted').textContent = s.completed;
-                    document.getElementById('kpiOverdue').textContent = s.overdue;
-                    
-                    const changedEl = document.getElementById('kpiStatusChanged');
-                    if (changedEl) changedEl.textContent = s.status_changed;
-                    
-                    const unmatchedEl = document.getElementById('kpiUnmatched');
-                    if (unmatchedEl) unmatchedEl.textContent = s.unmatched_signoff;
                 }
             })
             .catch(err => console.error('Failed to refresh KPIs:', err));

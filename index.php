@@ -315,66 +315,6 @@ if ($pdo) {
             <div class="kpi-subtext">ECOs marked Complete</div>
             <div class="kpi-indicator"></div>
         </div>
-
-        <div class="kpi-card pending-pmc" data-filter="pending_pmc">
-            <div class="kpi-label">
-                <span>Pending PMC</span>
-                <span style="color:#d97706;">●</span>
-            </div>
-            <div class="kpi-value" id="kpiPendingPmc"><?= number_format($pendingPmc) ?></div>
-            <div class="kpi-subtext">Requires PMC signoff</div>
-            <div class="kpi-indicator"></div>
-        </div>
-
-        <div class="kpi-card pending-qa" data-filter="pending_qa">
-            <div class="kpi-label">
-                <span>Pending QA</span>
-                <span style="color:#2563eb;">●</span>
-            </div>
-            <div class="kpi-value" id="kpiPendingQa"><?= number_format($pendingQa) ?></div>
-            <div class="kpi-subtext">PMC completed, waiting QA</div>
-            <div class="kpi-indicator"></div>
-        </div>
-
-        <div class="kpi-card completed" data-filter="completed">
-            <div class="kpi-label">
-                <span>Completed</span>
-                <span style="color:#16a34a;">●</span>
-            </div>
-            <div class="kpi-value" id="kpiCompleted"><?= number_format($completed) ?></div>
-            <div class="kpi-subtext">Both PMC & QA completed</div>
-            <div class="kpi-indicator"></div>
-        </div>
-
-        <div class="kpi-card overdue" data-filter="overdue">
-            <div class="kpi-label">
-                <span>Overdue</span>
-                <span style="color:#dc2626;">●</span>
-            </div>
-            <div class="kpi-value" id="kpiOverdue"><?= number_format($overdue) ?></div>
-            <div class="kpi-subtext">&gt;14 days from origin</div>
-            <div class="kpi-indicator"></div>
-        </div>
-
-        <div class="kpi-card status-changed" data-filter="status_changed">
-            <div class="kpi-label">
-                <span>Status Changed</span>
-                <span style="color:#8b5cf6;">●</span>
-            </div>
-            <div class="kpi-value" id="kpiStatusChanged"><?= number_format($statusChanged) ?></div>
-            <div class="kpi-subtext">Recent signoff changes</div>
-            <div class="kpi-indicator"></div>
-        </div>
-
-        <div class="kpi-card unmatched" data-filter="unmatched">
-            <div class="kpi-label">
-                <span>Unmatched</span>
-                <span style="color:#64748b;">●</span>
-            </div>
-            <div class="kpi-value" id="kpiUnmatched"><?= number_format($unmatchedSignoff) ?></div>
-            <div class="kpi-subtext">Signoff-only records</div>
-            <div class="kpi-indicator"></div>
-        </div>
     </section>
 
     <!-- Multi-Filter Toolbar -->
