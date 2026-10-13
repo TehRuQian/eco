@@ -162,13 +162,16 @@ body {
 
 /* KPI Cards Grid */
 .kpi-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    display: flex;
+    flex-wrap: wrap;
     gap: 16px;
     margin-bottom: 24px;
 }
 
 .kpi-card {
+    flex: 0 1 240px;
+    max-width: 100%;
+    min-width: 0;
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
