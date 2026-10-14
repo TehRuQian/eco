@@ -318,6 +318,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         <div style="background:#dcfce7; color:#15803d; border:1px solid #86efac; border-radius:6px; padding:12px; font-size:13px;">
                             <strong>✓ Pre-Flight Passed!</strong><br>
                             All required Agile PLM columns are present. Rows detected in SearchResult: ${data.info.search_result_rows || 'N/A'}.<br>
+                            ${(data.info.warnings || []).map(w => `<p>${w}</p>`).join('')}
                             ${data.info.signoff_rows ? `Signoff rows detected: ${data.info.signoff_rows}.` : 'No signoff file provided (optional).'}
                         </div>
                     `;
@@ -372,6 +373,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     preFlightResults.innerHTML = `
                         <div style="background:#dcfce7; color:#15803d; border:1px solid #86efac; border-radius:6px; padding:14px; font-size:13px;">
                             <strong>✓ ${data.message}</strong>
+                            ${(data.warnings || []).map(w => `<p>${w}</p>`).join('')}
                             <p style="margin-top:8px;">Reloading dashboard in 2 seconds...</p>
                         </div>
                     `;

@@ -86,6 +86,9 @@ class ECOProcessor
             } catch (Throwable $e) {}
         } else {
             $requiredMaster = [
+                'wip_action'      => "VARCHAR(100) NULL",
+                'fg_action'       => "VARCHAR(100) NULL",
+                'warehouse_action' => "VARCHAR(100) NULL",
                 'cut_in_first_mo' => "VARCHAR(100) NULL",
                 'cut_in_date'     => "DATETIME NULL",
                 'pmc_site'        => "VARCHAR(150) NULL",
@@ -458,7 +461,17 @@ class ECOProcessor
                 foreach ($normalizedRow as $colIdx => $colName) {
                     if ($colName === '') continue;
                     foreach ($aliases as $alias) {
-                        if ($colName === $alias || strpos($colName, $alias) !== false) {
+                        // These master fields require exact aliases, never substring matches.
+                        // Normalize punctuation consistently and ignore minor whitespace differences.
+                        $exactMasterField = in_array($standardKey, [
+                            'wip_action', 'fg_action', 'warehouse_action',
+                            'cut_in_first_mo', 'cut_in_date', 'completed_date'
+                        ], true);
+                        if ($exactMasterField) $alias = self::normalizeHeader($alias);
+                        $matches = $exactMasterField
+                            ? preg_replace('/\s+/u', '', $colName) === preg_replace('/\s+/u', '', $alias)
+                            : ($colName === $alias || strpos($colName, $alias) !== false);
+                        if ($matches) {
                             $matched[$standardKey] = $colIdx;
                             break 2;
                         }
@@ -505,11 +518,11 @@ class ECOProcessor
             'ec_type_category'  => ['ec type & category', 'ec type category', 'type category'],
             'subject'           => ['subject', 'description'],
             'status_in_agile'   => ['status in agile', 'agile status'],
-            'wip_action'        => ['wip action'],
-            'fg_action'         => ['fg action'],
-            'warehouse_action'  => ['warehouse action'],
-            'cut_in_first_mo'   => ['cut in 1st m o', 'cut in 1st mo', 'first mo'],
-            'cut_in_date'       => ['cut in date'],
+            'wip_action'        => ['a - How to deal with the WIP (Page Three)', 'wip action'],
+            'fg_action'         => ['b - How to deal with the FG (Page Three)', 'fg action'],
+            'warehouse_action'  => ['c - How to deal with the warehouse demand (Page Three)', 'warehouse action'],
+            'cut_in_first_mo'   => ['* Cut in 1st M/O (Page Three)', 'cut in 1st m o', 'cut in 1st mo', 'first mo'],
+            'cut_in_date'       => ['* Cut in Date (Page Three)', 'cut in date'],
             'completed_date'    => ['final complete date', 'completed date', 'complete date']
         ];
 
@@ -533,6 +546,13 @@ class ECOProcessor
                         if (!isset($masterFound[$req])) {
                             $readable = ucwords(str_replace('_', ' ', $req));
                             $errors[] = "SearchResult missing required column: '{$readable}' (e.g. Change Number, Status, PMC_Site, QA_Site, Date Originated).";
+                        }
+                    }
+
+                    $info['warnings'] = [];
+                    foreach (['wip_action', 'fg_action', 'warehouse_action', 'cut_in_first_mo', 'cut_in_date', 'completed_date'] as $field) {
+                        if (!isset($masterFound[$field])) {
+                            $info['warnings'][] = "SearchResult missing column: '{$masterAliases[$field][0]}' ({$field}). Imported values for this field will be NULL, including on re-import.";
                         }
                     }
 
@@ -667,9 +687,9 @@ class ECOProcessor
                 'status'                     => $cleanStatus,
                 'subject'                    => isset($masterMap['subject']) ? self::cleanText((string)($row[$masterMap['subject']] ?? '')) : null,
                 'status_in_agile'            => $statusInAgile,
-                'wip_action'                 => isset($masterMap['wip_action']) ? self::cleanText((string)($row[$masterMap['wip_action']] ?? '')) : null,
-                'fg_action'                  => isset($masterMap['fg_action']) ? self::cleanText((string)($row[$masterMap['fg_action']] ?? '')) : null,
-                'warehouse_action'           => isset($masterMap['warehouse_action']) ? self::cleanText((string)($row[$masterMap['warehouse_action']] ?? '')) : null,
+                'wip_action'                 => isset($masterMap['wip_action']) ? (string)($row[$masterMap['wip_action']] ?? '') : null,
+                'fg_action'                  => isset($masterMap['fg_action']) ? (string)($row[$masterMap['fg_action']] ?? '') : null,
+                'warehouse_action'           => isset($masterMap['warehouse_action']) ? (string)($row[$masterMap['warehouse_action']] ?? '') : null,
                 'cut_in_first_mo'            => isset($masterMap['cut_in_first_mo']) ? self::cleanText((string)($row[$masterMap['cut_in_first_mo']] ?? '')) : null,
                 'cut_in_date'                => $dtCutIn ? $dtCutIn->format('Y-m-d H:i:s') : null,
                 'pmc_site'                   => $pmcSite,
@@ -959,6 +979,7 @@ class ECOProcessor
             return [
                 'success' => true,
                 'stats'   => $stats,
+                'warnings' => $validation['info']['warnings'] ?? [],
                 'message' => sprintf(
                     "Import successful! Master: %d inserted, %d updated. Tracking: %d new, %d preserved. Signoff: %d processed (%d changed, %d unmatched retained).",
                     $stats['master_inserted'],
