@@ -148,6 +148,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const arrow = this.querySelector('.expand-arrow');
 
             if (detailRow) {
+                detailRow.style.removeProperty('display');
                 const isShowing = detailRow.classList.contains('show');
                 if (isShowing) {
                     detailRow.classList.remove('show');
@@ -486,8 +487,8 @@ document.addEventListener('DOMContentLoaded', function () {
             
             // Also hide detail row if main row is hidden
             const detailRow = document.getElementById(`detail-${row.getAttribute('data-eco')}`);
-            if (detailRow && !isVisible) {
-                detailRow.style.display = 'none';
+            if (detailRow) {
+                detailRow.style.display = isVisible ? '' : 'none';
             }
 
             if (isVisible) visibleCount++;
