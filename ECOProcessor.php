@@ -692,6 +692,7 @@ class ECOProcessor
                 'warehouse_action'           => isset($masterMap['warehouse_action']) ? (string)($row[$masterMap['warehouse_action']] ?? '') : null,
                 'cut_in_first_mo'            => isset($masterMap['cut_in_first_mo']) ? self::cleanText((string)($row[$masterMap['cut_in_first_mo']] ?? '')) : null,
                 'cut_in_date'                => $dtCutIn ? $dtCutIn->format('Y-m-d H:i:s') : null,
+                'raw_cut_in_date'            => $rawCutIn,
                 'pmc_site'                   => $pmcSite,
                 'qa_site'                    => $qaSite,
                 'originated_date'            => $dtOriginated ? $dtOriginated->format('Y-m-d H:i:s') : null,
@@ -742,6 +743,21 @@ class ECOProcessor
         $masterCols   = $getTableColumns('eco_master');
         $signoffCols  = $getTableColumns('eco_signoff');
         $trackingCols = $getTableColumns('eco_tracking');
+
+        // Existing installations may store Cut in Date as TEXT rather than DATETIME.
+        // Preserve the uploaded cell for text columns, including NA and free-form notes.
+        $masterDefinitions = $this->pdo->query("SHOW COLUMNS FROM `eco_master`")->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($masterDefinitions as $definition) {
+            if ($definition['Field'] === 'cut_in_date' &&
+                preg_match('/^(?:tinytext|text|mediumtext|longtext|varchar|char)\b/i', $definition['Type'])) {
+                foreach ($masterData as &$masterRecord) {
+                    $rawValue = $masterRecord['raw_cut_in_date'];
+                    $masterRecord['cut_in_date'] = $rawValue === null ? null : (string)$rawValue;
+                }
+                unset($masterRecord);
+                break;
+            }
+        }
 
         // Execute Database Transactions
         $this->pdo->beginTransaction();

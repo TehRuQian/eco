@@ -15,6 +15,7 @@ class ImportTestPDO extends PDO {
     public array $tracking = [];
     public array $writes = [];
     public array $columns;
+    public string $cutInType = 'datetime';
     private bool $transaction = false;
     public function __construct() {
         $schema = file_get_contents(__DIR__ . '/../schema.sql');
@@ -67,7 +68,11 @@ class ImportTestStatement extends PDOStatement {
     }
     public function fetchAll(int $mode = PDO::FETCH_DEFAULT, mixed ...$args): array {
         preg_match('/SHOW COLUMNS FROM `([^`]+)`/', $this->sql, $match);
-        return $this->db->columns[$match[1]];
+        $columns = $this->db->columns[$match[1]];
+        if ($mode === PDO::FETCH_ASSOC) {
+            return array_map(fn($field) => ['Field' => $field, 'Type' => $field === 'cut_in_date' ? $this->db->cutInType : 'varchar(100)'], $columns);
+        }
+        return $columns;
     }
 }
 
@@ -157,6 +162,25 @@ try {
     check($db->master['ECO001']['completed_date'], null, 'latest blank date clears old value');
     check(ECOProcessor::parseAgileDate(46309)->format('Y-m-d'), '2026-10-14', 'Excel serial date');
     check(ECOProcessor::parseAgileDate('10/14/2026')->format('Y-m-d'), '2026-10-14', 'US date');
+
+    // TEXT column: preserve dates and non-date content on insert and re-import.
+    foreach (['2026/10/14', 'NA', 'running change', ''] as $textValue) {
+        $handle = fopen($file, 'w');
+        fputcsv($handle, $headers, ',', '"', '');
+        $values[8] = $textValue;
+        fputcsv($handle, $values, ',', '"', '');
+        fclose($handle);
+        $textDb = new ImportTestPDO();
+        $textDb->cutInType = 'text';
+        $processor = new ECOProcessor($textDb);
+        $result = $processor->processImport($file, 'SearchResult.csv');
+        check($result['success'], true, 'TEXT Cut in Date import succeeds');
+        check($textDb->master['ECO001']['cut_in_date'], $textValue, 'TEXT Cut in Date preserves uploaded value');
+        $textDb->master['ECO001']['cut_in_date'] = 'old';
+        $result = $processor->processImport($file, 'SearchResult.csv');
+        check($result['stats']['master_updated'], 1, 'TEXT Cut in Date re-import updates');
+        check($textDb->master['ECO001']['cut_in_date'], $textValue, 'TEXT Cut in Date replaces old value');
+    }
 
     $handle = fopen($file, 'w');
     fputcsv($handle, ['Change Number', 'Status', 'PMC_Site', 'QA_Site', 'Date Originated'], ',', '"', '');
