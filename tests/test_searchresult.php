@@ -76,7 +76,7 @@ $headers = [
     " c - How to deal with the warehouse\xC2\xA0 demand ( Page Three ) ",
     '*Cut in 1st M / O(Page Three)', 'Status', ' b-How to deal with the FG (Page Three) ',
     'QA_Site', ' * Cut in Date (Page Three) ', 'Date Originated',
-    " a - How to deal with the WIP\n(Page Three) ", 'PMC_Site'
+    " a - How to deal with the WIP\n(Page Three). ", 'PMC_Site'
 ];
 $values = ['2026/10/15', 'must not map', ' eco001 ', 'No Impact', 'MO123456', 'Open',
     'No impact, new build, no FG.', 'QA', '2026/10/14', '2026-10-01',
@@ -117,7 +117,11 @@ try {
         }
         $db->tracking['ECO001'] = ['eco_no' => 'ECO001', 'manual_cut_in_first_mo' => 'MANUAL', 'due_date' => '2027-01-01', 'pmc_result_completed' => 1];
         $tracking = $db->tracking;
-        $db->master['ECO001']['wip_action'] = 'old';
+        foreach (['wip_action', 'fg_action', 'warehouse_action', 'cut_in_first_mo'] as $field) {
+            $db->master['ECO001'][$field] = 'old value';
+        }
+        $db->master['ECO001']['cut_in_date'] = '2020-01-01 00:00:00';
+        $db->master['ECO001']['completed_date'] = '2020-01-02 00:00:00';
         $result = $processor->processImport($file, 'SearchResult.' . $extension);
         check($result['stats']['master_updated'], 1, "$extension existing ECO updated");
         check($db->master['ECO001'], $record, "$extension re-import updates all master fields");
@@ -145,6 +149,12 @@ try {
     check($db->master['ECO001']['fg_action'], 'NA', 'NA preserved');
     check($db->master['ECO001']['completed_date'], null, 'blank date');
     check($db->master['ECO001']['cut_in_date'], '2026-10-14 00:00:00', 'ISO date');
+    $db->master['ECO001']['wip_action'] = 'previous WIP action';
+    $db->master['ECO001']['completed_date'] = '2020-01-01 00:00:00';
+    $result = (new ECOProcessor($db))->processImport($file, 'SearchResult.csv');
+    check($result['stats']['master_updated'], 1, 'latest CSV updates existing ECO');
+    check($db->master['ECO001']['wip_action'], '', 'latest blank action clears old value');
+    check($db->master['ECO001']['completed_date'], null, 'latest blank date clears old value');
     check(ECOProcessor::parseAgileDate(46309)->format('Y-m-d'), '2026-10-14', 'Excel serial date');
     check(ECOProcessor::parseAgileDate('10/14/2026')->format('Y-m-d'), '2026-10-14', 'US date');
 
