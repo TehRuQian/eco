@@ -35,22 +35,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }, duration);
     }
 
-    // -------------------------------------------------------------
-    // Live Dashboard KPI Refresh
-    // -------------------------------------------------------------
-    function refreshKPIs() {
-        fetch('api.php?action=get_dashboard_summary')
-            .then(res => res.json())
-            .then(data => {
-                if (data.success && data.summary) {
-                    const s = data.summary;
-                    document.getElementById('kpiTotalEco').textContent = s.total_eco;
-                    document.getElementById('kpiAgileOpen').textContent = s.agile_open;
-                    document.getElementById('kpiAgileClosed').textContent = s.agile_closed;
-                }
-            })
-            .catch(err => console.error('Failed to refresh KPIs:', err));
-    }
 
     // -------------------------------------------------------------
     // AJAX PMC / QA Toggle Buttons
@@ -113,7 +97,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
 
                     showToast(`${ecoNo}: ${field.toUpperCase()} marked as ${isYes ? 'YES' : 'NO'} (${data.status_progress})`, 'success');
-                    refreshKPIs();
+                    applyFilters();
                 } else {
                     this.innerHTML = originalHtml;
                     showToast(data.message || 'Toggle failed', 'error');
@@ -413,7 +397,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         document.querySelectorAll('.badge-changed').forEach(el => el.remove());
                         document.querySelectorAll('tr.highlight-changed').forEach(el => el.classList.remove('highlight-changed'));
                         this.style.display = 'none';
-                        refreshKPIs();
+                        applyFilters();
                     }
                 });
         });
@@ -448,6 +432,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const rows = document.querySelectorAll('tr.eco-row');
         let visibleCount = 0;
+        let agileOpenCount = 0;
+        let agileClosedCount = 0;
 
         rows.forEach(row => {
             const ecoNo = (row.getAttribute('data-eco') || '').toLowerCase();
@@ -491,12 +477,30 @@ document.addEventListener('DOMContentLoaded', function () {
                 detailRow.style.display = isVisible ? '' : 'none';
             }
 
-            if (isVisible) visibleCount++;
+            if (isVisible) {
+                visibleCount++;
+                if (agile === 'closed') {
+                    agileClosedCount++;
+                } else {
+                    agileOpenCount++;
+                }
+            }
         });
 
         if (rowCountEl) {
             rowCountEl.textContent = `Showing ${visibleCount} of ${rows.length} ECOs`;
         }
+
+        // Summary cards describe the same records as the filtered table.
+        const summary = {
+            kpiTotalEco: visibleCount,
+            kpiAgileOpen: agileOpenCount,
+            kpiAgileClosed: agileClosedCount
+        };
+        Object.entries(summary).forEach(([id, count]) => {
+            const cardValue = document.getElementById(id);
+            if (cardValue) cardValue.textContent = count.toLocaleString('en-US');
+        });
     }
 
     [searchBox, filterCustomer, filterProject, filterAgileStatus,
@@ -580,6 +584,8 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         applyFilters();
     });
+
+    applyFilters();
 
     // -------------------------------------------------------------
     // Export Button with active filters
