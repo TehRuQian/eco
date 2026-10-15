@@ -1,44 +1,87 @@
 # ECO Tracker
 
+PHP application for importing Agile PLM ECO reports, tracking PMC and QA completion, and exporting filtered records to CSV.
+
 ## Project structure
 
 ```text
 eco/
-|-- src/
-|   `-- ECOProcessor.php       # ECO processing and business logic
 |-- config/
-|   `-- db.php                 # Shared database connection
+|   `-- db.php                    # Shared PDO database connection
 |-- database/
-|   |-- schema.sql            # Initial database schema
-|   `-- migration.sql         # Upgrade an existing database
-|-- public/                   # Web server document root
-|   |-- index.php             # Main dashboard
-|   |-- dashboard.php         # Additional dashboard
-|   |-- api.php               # API endpoint
-|   |-- add.php
-|   |-- edit.php
-|   |-- delete.php
-|   |-- upload_tracker.php
-|   |-- upload_signoff.php
-|   |-- export.php
-|   `-- assets/
-|       |-- css/style.css
-|       `-- js/app.js
-|-- prototypes/               # Standalone HTML design versions
-|-- tests/                    # Business logic and import regression tests
-|-- vendor/                   # Composer dependencies
-|-- composer.json
-`-- composer.lock
+|   |-- schema.sql               # Initial eco_db schema
+|   `-- migration.sql            # Upgrade SQL for an existing database
+|-- prototypes/
+|   |-- prototype.html           # Standalone UI design versions
+|   |-- prototypev2.html
+|   |-- prototypev3.html
+|   |-- prototypev4.html
+|   `-- prototypev5.html
+|-- public/                      # Web server document root
+|   |-- assets/
+|   |   |-- css/style.css        # Dashboard styles
+|   |   `-- js/app.js            # Dashboard interactions and API requests
+|   |-- index.php                # Main dashboard and import interface
+|   |-- api.php                  # Validation, import, tracking, and summary API
+|   |-- export.php               # Filtered CSV export
+|   |-- upload_tracker.php       # Standalone tracker CSV import
+|   |-- upload_signoff.php       # Standalone signoff Excel import
+|   |-- add.php                  # Legacy eco_records create form
+|   `-- edit.php                 # Legacy eco_records edit form
+|-- src/
+|   `-- ECOProcessor.php         # Parsing, validation, import, and tracking rules
+|-- tests/
+|   |-- test_logic.php           # Business logic checks
+|   `-- test_searchresult.php    # CSV/XLS/XLSX import regression checks
+|-- vendor/                      # Composer-managed dependencies
+|-- composer.json               # Dependency requirements
+|-- composer.lock               # Locked dependency versions
+`-- README.md
 ```
+
+## How the files work together
+
+The main dashboard is `public/index.php`. It loads `config/db.php` and `src/ECOProcessor.php`, and serves its styles and JavaScript from `public/assets/`. Browser actions in `app.js` call `public/api.php`; exports use `public/export.php`. `ECOProcessor.php` loads the Composer autoloader from `vendor/autoload.php`.
+
+The main application stores data in three tables defined in `database/schema.sql`: `eco_master` for ECO data, `eco_signoff` for signoff status, and `eco_tracking` for manual tracking and completion fields.
+
+`public/add.php` and `public/edit.php` are legacy forms that target `eco_records`. That table is not created by the current schema, so these forms need an existing legacy table to work. The standalone upload pages use the current ECO tables.
+
+The HTML files in `prototypes/` are design references and can be opened directly in a browser. They are separate from the PHP application.
+
+## Requirements
+
+- 64-bit PHP 8.3 or later within PHP 8.x, as required by the current `composer.lock` dependencies.
+- Composer to install the locked packages, including PhpSpreadsheet.
+- MySQL access through PHP's PDO MySQL driver (`pdo_mysql`).
+- PHP extensions required by the locked packages: `ctype`, `dom`, `fileinfo`, `filter`, `gd`, `iconv`, `libxml`, `mbstring`, `simplexml`, `xml`, `xmlreader`, `xmlwriter`, `zip`, and `zlib`.
 
 ## Setup
 
 Run commands from the project root.
 
-1. Install PHP and the extensions required by the locked Composer dependencies, then run `composer install`.
-2. For a new database, import `database/schema.sql` into MySQL. To upgrade an existing database, review and apply `database/migration.sql` as needed.
-3. Configure `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASS` in the server environment. Connection defaults are in `config/db.php`.
-4. Set the web server document root to this project's `public/` directory. PHP pages and assets are served from there; application code, database scripts, dependencies, tests, and prototypes remain outside the document root.
+1. Install and check the locked dependencies:
+
+   ```sh
+   composer install
+   composer check-platform-reqs
+   ```
+
+2. For a new database, import `database/schema.sql`. It creates and selects `eco_db`. To upgrade an existing database, review `database/migration.sql` and apply the statements supported by your database server. Both scripts explicitly select `eco_db`; adjust them if you use a different database name.
+
+3. Set the database environment variables in your PHP server environment:
+
+   | Variable | Purpose |
+   |---|---|
+   | `DB_HOST` | Database host; defaults to `localhost` |
+   | `DB_PORT` | Database port; defaults to `3306` |
+   | `DB_NAME` | Database name; defaults to `eco_db` |
+   | `DB_USER` | Database username |
+   | `DB_PASS` | Database password |
+
+   Connection defaults are defined in `config/db.php`. Environment variables override those defaults. There is no automatic `.env` file loader.
+
+4. Set the web server document root to this project's `public/` directory. Keep `config/`, `database/`, `src/`, `tests/`, `prototypes/`, and `vendor/` outside the document root. The application entry point is `public/index.php`.
 
 For local development:
 
@@ -46,9 +89,7 @@ For local development:
 php -S localhost:8000 -t public
 ```
 
-Open http://localhost:8000/ in your browser. Page and API filenames are unchanged under the new document root. Update any existing server configuration or launch command that previously served the project root.
-
-Prototypes can be opened directly from `prototypes/` for design review.
+Open http://localhost:8000/ in your browser. Page links, assets, and API requests resolve relative to `public/`. Existing server configurations that served the project root need to use `public/` instead.
 
 ## Validation
 
@@ -59,4 +100,6 @@ php tests/test_logic.php
 php tests/test_searchresult.php
 ```
 
-The test suites use temporary files. The import regression suite uses a test database double and does not need a production database connection.
+Both suites load `src/ECOProcessor.php`, require the Composer dependencies, and create temporary files. Neither requires a live database: the business logic suite uses a null connection, and the SearchResult suite uses a PDO test double and reads `database/schema.sql`.
+
+`test_logic.php` prints individual `[PASS]` or `[FAIL]` results; inspect those results because its final completion message and exit status do not indicate whether every assertion passed. `test_searchresult.php` throws an exception when a check fails.
