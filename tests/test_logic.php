@@ -4,7 +4,7 @@
  * Automated Unit Test Suite for ECO Tracker Business Logic
  */
 
-require_once __DIR__ . '/../ECOProcessor.php';
+require_once __DIR__ . '/../src/ECOProcessor.php';
 
 function assertEq($actual, $expected, $testName) {
     if ($actual === $expected) {

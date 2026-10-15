@@ -1,6 +1,6 @@
 <?php
 /** SearchResult mapping regression tests. Run: php tests/test_searchresult.php */
-require_once __DIR__ . '/../ECOProcessor.php';
+require_once __DIR__ . '/../src/ECOProcessor.php';
 
 function check($actual, $expected, string $label): void {
     if ($actual !== $expected) {
@@ -18,7 +18,7 @@ class ImportTestPDO extends PDO {
     public string $cutInType = 'datetime';
     private bool $transaction = false;
     public function __construct() {
-        $schema = file_get_contents(__DIR__ . '/../schema.sql');
+        $schema = file_get_contents(__DIR__ . '/../database/schema.sql');
         foreach (['eco_master', 'eco_signoff', 'eco_tracking'] as $table) {
             preg_match('/CREATE TABLE IF NOT EXISTS `' . $table . '` \((.*?)\) ENGINE/s', $schema, $match);
             preg_match_all('/^\s*`([^`]+)`/m', $match[1], $columns);

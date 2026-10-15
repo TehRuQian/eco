@@ -4,9 +4,9 @@ ini_set('display_errors', '0');
 ini_set('log_errors', '1');
 
 session_start();
-require __DIR__ . '/db.php';
-require __DIR__ . '/vendor/autoload.php';
-require_once __DIR__ . '/ECOProcessor.php';
+require __DIR__ . '/../config/db.php';
+require __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/../src/ECOProcessor.php';
 
 use PhpOffice\PhpSpreadsheet\IOFactory;
 

@@ -8,8 +8,8 @@
 error_reporting(E_ALL);
 ini_set('display_errors', '0');
 
-require_once __DIR__ . '/db.php';
-require_once __DIR__ . '/ECOProcessor.php';
+require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../src/ECOProcessor.php';
 
 if (!$pdo) {
     die("Database connection failed.");

@@ -1,5 +1,5 @@
 <?php
-require 'db.php';
+require __DIR__ . '/../config/db.php';
 $id = $_GET['id'] ?? 0;
 $stmt = $pdo->prepare("DELETE FROM eco_records WHERE id = ?");
 $stmt->execute([$id]);

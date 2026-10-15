@@ -1,5 +1,5 @@
 <?php
-require 'db.php';
+require __DIR__ . '/../config/db.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt = $pdo->prepare("INSERT INTO eco_records

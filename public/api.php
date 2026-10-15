@@ -10,8 +10,8 @@ ini_set('log_errors', '1');
 
 header('Content-Type: application/json; charset=utf-8');
 
-require_once __DIR__ . '/db.php';
-require_once __DIR__ . '/ECOProcessor.php';
+require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../src/ECOProcessor.php';
 
 function jsonResponse(array $data, int $statusCode = 200): void
 {

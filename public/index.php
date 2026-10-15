@@ -8,8 +8,8 @@ error_reporting(E_ALL);
 ini_set('display_errors', '0');
 ini_set('log_errors', '1');
 
-require_once __DIR__ . '/db.php';
-require_once __DIR__ . '/ECOProcessor.php';
+require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../src/ECOProcessor.php';
 
 function h($v): string
 {
@@ -271,8 +271,8 @@ if ($pdo) {
     <?php if (!$pdo): ?>
         <div style="background:#fee2e2; border:1px solid #f87171; border-radius:10px; padding:18px 24px; margin-bottom:24px; color:#991b1b;">
             <h3 style="margin-bottom:6px; font-size:16px;">Database Connection Notice</h3>
-            <p style="font-size:13.5px;">Unable to connect to MySQL database: <strong><?= h($db_connection_error ?? 'Check credentials in db.php') ?></strong></p>
-            <p style="font-size:12.5px; margin-top:6px; color:#7f1d1d;">When running on your LAMP server, ensure the database name <code>eco_db</code> and credentials are created using <code>schema.sql</code>.</p>
+            <p style="font-size:13.5px;">Unable to connect to MySQL database: <strong><?= h($db_connection_error ?? 'Check credentials in config/db.php') ?></strong></p>
+            <p style="font-size:12.5px; margin-top:6px; color:#7f1d1d;">When running on your LAMP server, ensure the database name <code>eco_db</code> and credentials are created using <code>database/schema.sql</code>.</p>
         </div>
     <?php endif; ?>
 
@@ -280,7 +280,7 @@ if ($pdo) {
         <div style="background:#fffbeb; border:1px solid #fcd34d; border-radius:10px; padding:18px 24px; margin-bottom:24px; color:#92400e;">
             <h3 style="margin-bottom:6px; font-size:16px;">Database Query Notice</h3>
             <p style="font-size:13.5px;">Query message: <strong><?= h($dbError) ?></strong></p>
-            <p style="font-size:12.5px; margin-top:6px; color:#78350f;">If you have legacy tables from an older schema, you can run <a href="migration.sql" target="_blank" style="color:#b45309; font-weight:600;">migration.sql</a> in phpMyAdmin to upgrade them.</p>
+            <p style="font-size:12.5px; margin-top:6px; color:#78350f;">If you have legacy tables from an older schema, you can run <code>database/migration.sql</code> in phpMyAdmin to upgrade them.</p>
         </div>
     <?php endif; ?>
 
