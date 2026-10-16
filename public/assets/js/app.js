@@ -34,6 +34,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 let progress;
                 for (const field of ['pmc', 'qa']) {
                     const td = cell('');
+                    td.className = 'signoff-cell';
                     const site = document.createElement('span');
                     site.className = 'site-badge';
                     site.textContent = record[`${field}_site`] || `No ${field.toUpperCase()} Site`;

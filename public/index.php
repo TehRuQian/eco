@@ -513,7 +513,7 @@ if ($pdo) {
                             </td>
 
                             <!-- PMC Site & Toggle -->
-                            <td>
+                            <td class="signoff-cell">
                                 <span class="site-badge" title="<?= h($r['pmc_site']) ?>">
                                     <?= !empty($r['pmc_site']) ? h($r['pmc_site']) : '<span style="color:#94a3b8;">No PMC Site</span>' ?>
                                 </span>
@@ -528,7 +528,7 @@ if ($pdo) {
                             </td>
 
                             <!-- QA Site & Toggle -->
-                            <td>
+                            <td class="signoff-cell">
                                 <span class="site-badge" title="<?= h($r['qa_site']) ?>">
                                     <?= !empty($r['qa_site']) ? h($r['qa_site']) : '<span style="color:#94a3b8;">No QA Site</span>' ?>
                                 </span>
