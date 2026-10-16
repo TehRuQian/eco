@@ -108,6 +108,6 @@ Both suites load `src/ECOProcessor.php`, require the Composer dependencies, and 
 
 Click **Review Open ECOs without signoff** to compare master ECOs with the latest uploaded user_signoff snapshot. Open uses the dashboard rule: statuses other than Complete are Open. Upload a full signoff report before reviewing; existing signoff history is treated as current until the next signoff upload.
 
-PMC and QA checkboxes save tracking progress only. Selecting **Complete** separately updates the master ECO status and removes it from this review. Closing the popup refreshes the dashboard after edits. A later SearchResult import can replace the master status with the source report's status.
+PMC and QA checkboxes save tracking progress only. The Status dropdown starts with the saved database value and allows Controller, Reviewer 1, Reviewer 2, or Complete. Saving updates only the master `status` column; `status_in_agile` and PMC/QA tracking stay unchanged. Complete removes the record from this review. Closing the popup refreshes the dashboard after edits. A later SearchResult import can replace the master status with the source report's status.
 
 Signoff uploads refresh snapshot membership transactionally while retaining previous signoff history. SearchResult-only imports preserve the last signoff snapshot. The new `in_latest_signoff` column is added automatically by the existing schema upgrade routine.

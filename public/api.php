@@ -118,11 +118,15 @@ try {
             jsonResponse(['success' => true, 'records' => $rows]);
             break;
 
-        case 'complete_missing_signoff':
+        case 'update_missing_signoff_status':
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
                 jsonResponse(['success' => false, 'message' => 'POST required.'], 405);
             }
             $ecoNo = ECOProcessor::normalizeEcoNo($_POST['eco_no'] ?? '');
+            $newStatus = trim((string)($_POST['status'] ?? ''));
+            if (!in_array($newStatus, ['Controller', 'Reviewer 1', 'Reviewer 2', 'Complete'], true)) {
+                jsonResponse(['success' => false, 'message' => 'Invalid ECO status.'], 400);
+            }
             $pdo->beginTransaction();
             $stmt = $pdo->prepare('SELECT status FROM eco_master WHERE eco_no = ? FOR UPDATE');
             $stmt->execute([$ecoNo]);
@@ -133,10 +137,10 @@ try {
                 $pdo->rollBack();
                 jsonResponse(['success' => false, 'message' => 'Record is no longer Open and missing from signoff. Refresh the list.'], 409);
             }
-            $stmt = $pdo->prepare("UPDATE eco_master SET status = 'Complete', status_in_agile = 'Closed' WHERE eco_no = ?");
-            $stmt->execute([$ecoNo]);
+            $stmt = $pdo->prepare('UPDATE eco_master SET status = ? WHERE eco_no = ?');
+            $stmt->execute([$newStatus, $ecoNo]);
             $pdo->commit();
-            jsonResponse(['success' => true, 'message' => 'ECO status changed to Complete.']);
+            jsonResponse(['success' => true, 'status' => $newStatus, 'message' => 'ECO status saved.']);
             break;
         case 'toggle_status':
             $ecoNo = ECOProcessor::normalizeEcoNo($_POST['eco_no'] ?? $_GET['eco_no'] ?? '');

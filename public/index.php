@@ -715,7 +715,7 @@ if ($pdo) {
             <button type="button" class="modal-close" id="closeMissingSignoff" aria-label="Close">&times;</button>
         </div>
         <div class="modal-body">
-            <p class="signoff-review-help">PMC and QA checkboxes update tracking progress only. Use Status to mark an ECO Complete.</p>
+            <p class="signoff-review-help">PMC and QA checkboxes update tracking progress only. Status shows the saved database value. Select Controller, Reviewer 1, Reviewer 2, or Complete to update it.</p>
             <p id="missingSignoffMessage" class="signoff-review-message" role="status"></p>
             <div class="table-card signoff-review-table"><div class="table-responsive">
                 <table class="eco-table"><thead><tr><th>ECO Number</th><th>PMC Site &amp; Signoff</th><th>QA Site &amp; Signoff</th><th>Tracker Progress</th><th>Status</th></tr></thead><tbody id="missingSignoffRows"></tbody></table></div>

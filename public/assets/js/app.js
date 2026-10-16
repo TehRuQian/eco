@@ -77,19 +77,28 @@ document.addEventListener('DOMContentLoaded', function () {
                 const status = document.createElement('select');
                 status.className = 'form-control';
                 status.setAttribute('aria-label', `${record.eco_no} status`);
-                for (const value of ['Open', 'Complete']) status.add(new Option(value, value));
+                const allowedStatuses = ['Controller', 'Reviewer 1', 'Reviewer 2', 'Complete'];
+                let savedStatus = record.status == null ? '' : String(record.status);
+                if (!allowedStatuses.includes(savedStatus)) {
+                    const current = new Option(savedStatus || 'No status set', savedStatus);
+                    current.disabled = true;
+                    status.add(current);
+                }
+                for (const value of allowedStatuses) status.add(new Option(value, value));
+                status.value = savedStatus;
                 cell('').appendChild(status);
                 status.addEventListener('change', async () => {
-                    if (status.value !== 'Complete') return;
+                    const selectedStatus = status.value;
                     status.disabled = true;
                     checks.forEach(control => control.disabled = true);
                     try {
-                        await reviewRequest('complete_missing_signoff', {eco_no: record.eco_no});
+                        await reviewRequest('update_missing_signoff_status', {eco_no: record.eco_no, status: selectedStatus});
+                        savedStatus = selectedStatus;
                         reviewChanged = true;
                         await loadReview();
                     } catch (error) {
                         reviewMessage.textContent = error.message;
-                        status.value = 'Open';
+                        status.value = savedStatus;
                         status.disabled = false;
                         checks.forEach(control => control.disabled = false);
                     }
