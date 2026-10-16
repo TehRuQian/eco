@@ -160,8 +160,8 @@ document.addEventListener('DOMContentLoaded', function () {
     // -------------------------------------------------------------
     // AJAX PMC / QA Toggle Buttons
     // -------------------------------------------------------------
-    document.querySelectorAll('.toggle-btn').forEach(btn => {
-        btn.addEventListener('click', function (e) {
+    document.querySelectorAll('.dashboard-signoff-check').forEach(btn => {
+        btn.addEventListener('change', function (e) {
             e.stopPropagation(); // prevent accordion toggle
             const ecoNo = this.getAttribute('data-eco');
             const field = this.getAttribute('data-field'); // 'pmc' or 'qa'
@@ -169,8 +169,8 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!ecoNo || !field) return;
 
             this.disabled = true;
-            const originalHtml = this.innerHTML;
-            this.innerHTML = '...';
+            const previousChecked = !this.checked;
+
 
             const formData = new FormData();
             formData.append('eco_no', ecoNo);
@@ -187,15 +187,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (data.success) {
                     const isYes = (field === 'pmc' ? data.pmc_result_completed : data.qa_result_completed) == 1;
                     
-                    if (isYes) {
-                        this.classList.remove('no');
-                        this.classList.add('yes');
-                        this.innerHTML = '✓ YES';
-                    } else {
-                        this.classList.remove('yes');
-                        this.classList.add('no');
-                        this.innerHTML = '✗ NO';
-                    }
+                    this.checked = isYes;
 
                     // Update Row Tracker Status Badge
                     const row = document.getElementById(`row-${ecoNo}`);
@@ -217,16 +209,16 @@ document.addEventListener('DOMContentLoaded', function () {
                         row.setAttribute('data-tracker-status', data.status_progress);
                     }
 
-                    showToast(`${ecoNo}: ${field.toUpperCase()} marked as ${isYes ? 'YES' : 'NO'} (${data.status_progress})`, 'success');
+                    showToast(`${ecoNo}: ${field.toUpperCase()} marked as ${isYes ? 'completed' : 'pending'} (${data.status_progress})`, 'success');
                     applyFilters();
                 } else {
-                    this.innerHTML = originalHtml;
+                    this.checked = previousChecked;
                     showToast(data.message || 'Toggle failed', 'error');
                 }
             })
             .catch(err => {
                 this.disabled = false;
-                this.innerHTML = originalHtml;
+                this.checked = previousChecked;
                 showToast('Network error during toggle: ' + err.message, 'error');
             });
         });
@@ -245,7 +237,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             // Do not toggle if clicked on button or link
-            if (e.target.closest('button') || e.target.closest('a')) return;
+            if (e.target.closest('button, a, input, label, select')) return;
 
             const ecoNo = this.getAttribute('data-eco');
             const detailRow = document.getElementById(`detail-${ecoNo}`);
@@ -311,7 +303,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (cancelEditModalBtn) cancelEditModalBtn.addEventListener('click', closeEditModal);
 
     document.querySelectorAll('.open-edit-modal').forEach(btn => {
-        btn.addEventListener('click', function (e) {
+        btn.addEventListener('change', function (e) {
             e.stopPropagation();
             const ecoNo = this.getAttribute('data-eco');
             openEditModal(ecoNo);

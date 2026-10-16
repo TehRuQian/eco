@@ -517,14 +517,13 @@ if ($pdo) {
                                 <span class="site-badge" title="<?= h($r['pmc_site']) ?>">
                                     <?= !empty($r['pmc_site']) ? h($r['pmc_site']) : '<span style="color:#94a3b8;">No PMC Site</span>' ?>
                                 </span>
-                                <button type="button"
-                                        class="toggle-btn <?= $pmcYes ? 'yes' : 'no' ?>"
-                                        data-eco="<?= $ecoNo ?>"
-                                        data-field="pmc"
-                                        title="Click to toggle PMC Completion"
-                                >
-                                    <?= $pmcYes ? '✓ YES' : '✗ NO' ?>
-                                </button>
+                                <label class="signoff-review-check">
+                                    <input type="checkbox" class="dashboard-signoff-check"
+                                           data-eco="<?= h($ecoNo) ?>" data-field="pmc"
+                                           aria-label="<?= h($ecoNo) ?> PMC tracking completed"
+                                           <?= $pmcYes ? 'checked' : '' ?>>
+                                    Completed
+                                </label>
                             </td>
 
                             <!-- QA Site & Toggle -->
@@ -532,14 +531,13 @@ if ($pdo) {
                                 <span class="site-badge" title="<?= h($r['qa_site']) ?>">
                                     <?= !empty($r['qa_site']) ? h($r['qa_site']) : '<span style="color:#94a3b8;">No QA Site</span>' ?>
                                 </span>
-                                <button type="button"
-                                        class="toggle-btn <?= $qaYes ? 'yes' : 'no' ?>"
-                                        data-eco="<?= $ecoNo ?>"
-                                        data-field="qa"
-                                        title="Click to toggle QA Completion"
-                                >
-                                    <?= $qaYes ? '✓ YES' : '✗ NO' ?>
-                                </button>
+                                <label class="signoff-review-check">
+                                    <input type="checkbox" class="dashboard-signoff-check"
+                                           data-eco="<?= h($ecoNo) ?>" data-field="qa"
+                                           aria-label="<?= h($ecoNo) ?> QA tracking completed"
+                                           <?= $qaYes ? 'checked' : '' ?>>
+                                    Completed
+                                </label>
                             </td>
 
                             <!-- Due Date -->
