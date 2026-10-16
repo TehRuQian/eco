@@ -29,17 +29,23 @@ document.addEventListener('DOMContentLoaded', function () {
                     row.appendChild(td);
                     return td;
                 };
-                cell(record.eco_no);
+                cell(record.eco_no).className = 'signoff-review-eco';
                 const checks = [];
                 let progress;
                 for (const field of ['pmc', 'qa']) {
                     const td = cell('');
+                    const site = document.createElement('span');
+                    site.className = 'site-badge';
+                    site.textContent = record[`${field}_site`] || `No ${field.toUpperCase()} Site`;
+                    site.title = site.textContent;
+                    td.appendChild(site);
                     const label = document.createElement('label');
+                    label.className = 'signoff-review-check';
                     const checkbox = document.createElement('input');
                     checkbox.type = 'checkbox';
                     checkbox.checked = Number(record[`${field}_result_completed`]) === 1;
                     checkbox.setAttribute('aria-label', `${record.eco_no} ${field.toUpperCase()} tracking completed`);
-                    label.append(checkbox, document.createTextNode(` ${record[`${field}_site`] || 'No site'}`));
+                    label.append(checkbox, document.createTextNode(' Completed'));
                     td.appendChild(label);
                     checks.push(checkbox);
                     checkbox.addEventListener('change', async () => {
@@ -49,7 +55,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         try {
                             const result = await reviewRequest('toggle_status', {eco_no: record.eco_no, field, updated_by: 'Signoff Review'});
                             checkbox.checked = Number(result[`${field}_result_completed`]) === 1;
-                            progress.textContent = result.status_progress;
+                            updateProgress(result.status_progress);
                             reviewChanged = true;
                         } catch (error) {
                             checkbox.checked = previous;
@@ -60,7 +66,14 @@ document.addEventListener('DOMContentLoaded', function () {
                         }
                     });
                 }
-                progress = cell(record.status_progress || 'Pending PMC');
+                progress = document.createElement('span');
+                function updateProgress(value) {
+                    progress.textContent = value;
+                    const badge = value === 'Completed' ? 'badge-completed' : value === 'Pending QA' ? 'badge-pending-qa' : 'badge-pending-pmc';
+                    progress.className = `badge ${badge}`;
+                }
+                updateProgress(record.status_progress || 'Pending PMC');
+                cell('').appendChild(progress);
                 const status = document.createElement('select');
                 status.className = 'form-control';
                 status.setAttribute('aria-label', `${record.eco_no} status`);

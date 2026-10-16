@@ -709,16 +709,16 @@ if ($pdo) {
 </div>
 
 <div class="modal-overlay" id="missingSignoffModal" role="dialog" aria-modal="true" aria-labelledby="missingSignoffTitle">
-    <div class="modal-box" style="max-width:1000px;">
+    <div class="modal-box signoff-review-box">
         <div class="modal-header">
             <h3 id="missingSignoffTitle">Open ECOs missing from user_signoff</h3>
             <button type="button" class="modal-close" id="closeMissingSignoff" aria-label="Close">&times;</button>
         </div>
         <div class="modal-body">
-            <p>PMC and QA checkboxes update tracking progress only. Use Status to mark an ECO Complete.</p>
-            <p id="missingSignoffMessage" role="status"></p>
-            <div style="overflow-x:auto;">
-                <table class="data-table"><thead><tr><th>ECO number</th><th>PMC site / progress</th><th>QA site / progress</th><th>Tracking progress</th><th>Status</th></tr></thead><tbody id="missingSignoffRows"></tbody></table>
+            <p class="signoff-review-help">PMC and QA checkboxes update tracking progress only. Use Status to mark an ECO Complete.</p>
+            <p id="missingSignoffMessage" class="signoff-review-message" role="status"></p>
+            <div class="table-card signoff-review-table"><div class="table-responsive">
+                <table class="eco-table"><thead><tr><th>ECO Number</th><th>PMC Site &amp; Signoff</th><th>QA Site &amp; Signoff</th><th>Tracker Progress</th><th>Status</th></tr></thead><tbody id="missingSignoffRows"></tbody></table></div>
             </div>
         </div>
     </div>

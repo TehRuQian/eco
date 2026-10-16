@@ -725,3 +725,17 @@ textarea.form-control {
     color: var(--text-secondary);
     margin-bottom: 6px;
 }
+
+/* Signoff review uses the dashboard table, badges, and form controls. */
+.signoff-review-box { max-width: 1000px; }
+.signoff-review-help { color: var(--text-secondary); font-size: 13px; line-height: 1.6; margin: 0 0 12px; }
+.signoff-review-message { color: var(--text-secondary); font-size: 13px; font-weight: 600; margin: 0 0 14px; }
+.signoff-review-table { border-radius: var(--radius-md); }
+.signoff-review-table .table-responsive { max-height: 55vh; }
+.signoff-review-table .eco-table { min-width: 680px; }
+.signoff-review-eco { color: var(--brand-accent); font-weight: 700; white-space: nowrap; }
+.signoff-review-check { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 20px; font-size: 11.5px; font-weight: 700; cursor: pointer; background: var(--toggle-no-bg); color: var(--toggle-no-text); border: 1px solid var(--toggle-no-border); }
+.signoff-review-check:has(input:checked) { background: var(--toggle-yes-bg); color: var(--toggle-yes-text); border-color: #15803d; }
+.signoff-review-check:has(input:disabled) { opacity: .6; cursor: wait; }
+.signoff-review-check input { margin: 0; accent-color: #15803d; }
+.signoff-review-table .form-control { min-width: 115px; font-size: 13px; }
