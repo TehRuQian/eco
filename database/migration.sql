@@ -59,3 +59,6 @@ INSERT IGNORE INTO `eco_tracking` (`eco_no`, `pmc_result_completed`, `qa_result_
 SELECT `eco_no`, 0, 0, 'Pending PMC' FROM `eco_master`;
 
 SELECT 'Migration completed successfully. Refresh the dashboard.' AS `Result`;
+
+-- Latest user_signoff snapshot membership (also added by ensureSchema).
+ALTER TABLE eco_signoff ADD COLUMN IF NOT EXISTS in_latest_signoff TINYINT(1) NOT NULL DEFAULT 1;

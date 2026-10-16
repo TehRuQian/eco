@@ -101,7 +101,7 @@ if ($pdo) {
         $hasSignoffTbl  = !empty($signoffCols);
         $hasTrackingTbl = !empty($trackingCols);
 
-        $signoffJoin = $hasSignoffTbl ? "LEFT JOIN `eco_signoff` es ON em.eco_no = es.eco_no" : "";
+        $signoffJoin = $hasSignoffTbl ? "LEFT JOIN `eco_signoff` es ON em.eco_no = es.eco_no AND es.in_latest_signoff = 1" : "";
         $trackingJoin = $hasTrackingTbl ? "LEFT JOIN `eco_tracking` et ON em.eco_no = et.eco_no" : "";
 
         $orderBy = in_array('year', $masterCols, true) && in_array('ww', $masterCols, true)
@@ -248,6 +248,7 @@ if ($pdo) {
                 </button>
             <?php endif; ?>
 
+            <button type="button" id="openMissingSignoff" class="btn btn-outline">Review Open ECOs without signoff</button>
             <button type="button" id="openUploadModal" class="btn btn-primary">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -707,6 +708,21 @@ if ($pdo) {
     </div>
 </div>
 
+<div class="modal-overlay" id="missingSignoffModal" role="dialog" aria-modal="true" aria-labelledby="missingSignoffTitle">
+    <div class="modal-box" style="max-width:1000px;">
+        <div class="modal-header">
+            <h3 id="missingSignoffTitle">Open ECOs missing from user_signoff</h3>
+            <button type="button" class="modal-close" id="closeMissingSignoff" aria-label="Close">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p>PMC and QA checkboxes update tracking progress only. Use Status to mark an ECO Complete.</p>
+            <p id="missingSignoffMessage" role="status"></p>
+            <div style="overflow-x:auto;">
+                <table class="data-table"><thead><tr><th>ECO number</th><th>PMC site / progress</th><th>QA site / progress</th><th>Tracking progress</th><th>Status</th></tr></thead><tbody id="missingSignoffRows"></tbody></table>
+            </div>
+        </div>
+    </div>
+</div>
 <script src="assets/js/app.js?v=<?= (int)filemtime(__DIR__ . '/assets/js/app.js') ?>"></script>
 </body>
 </html>

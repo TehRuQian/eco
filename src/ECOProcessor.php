@@ -122,6 +122,7 @@ class ECOProcessor
                         `status_changed` TINYINT(1) NOT NULL DEFAULT 0,
                         `status_changed_at` DATETIME NULL,
                         `is_unmatched` TINYINT(1) NOT NULL DEFAULT 0,
+                        `in_latest_signoff` TINYINT(1) NOT NULL DEFAULT 1,
                         `created_at` DATETIME NULL,
                         `updated_at` DATETIME NULL
                     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -135,6 +136,7 @@ class ECOProcessor
                 'status_changed'           => "TINYINT(1) NOT NULL DEFAULT 0",
                 'status_changed_at'        => "DATETIME NULL",
                 'is_unmatched'             => "TINYINT(1) NOT NULL DEFAULT 0",
+                'in_latest_signoff'        => "TINYINT(1) NOT NULL DEFAULT 1",
                 'created_at'               => "DATETIME NULL",
                 'updated_at'               => "DATETIME NULL",
             ];
@@ -888,6 +890,10 @@ class ECOProcessor
                 }
             }
 
+            // A signoff upload is a full snapshot; retain history separately from membership.
+            if ($signoffPath && file_exists($signoffPath)) {
+                $this->pdo->exec("UPDATE eco_signoff SET in_latest_signoff = 0");
+            }
             // 2. Process Signoff Data
             if (!empty($signoffCols) && $stmtGetSignoff) {
                 foreach ($signoffData as $ecoNo => $s) {
@@ -954,6 +960,7 @@ class ECOProcessor
                     $allSignFields = [
                         'eco_no'                   => $ecoNo,
                         'internal_status'          => $newStatus,
+                        'in_latest_signoff'        => 1,
                         'previous_internal_status' => $prevStatusVal,
                         'status_changed'           => $statusChanged,
                         'status_changed_at'        => $statusChangedAt,

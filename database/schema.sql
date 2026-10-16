@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS `eco_master` (
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `eco_signoff` (
     `eco_no`                     VARCHAR(100) NOT NULL COMMENT 'Normalized ECO Change Number',
+    `in_latest_signoff`          TINYINT(1) NOT NULL DEFAULT 1,
     `internal_status`            VARCHAR(100) NULL COMMENT 'Current signoff status',
     `previous_internal_status`   VARCHAR(100) NULL COMMENT 'Previous imported status',
     `status_changed`             TINYINT(1) NOT NULL DEFAULT 0 COMMENT '1 if status change detected',

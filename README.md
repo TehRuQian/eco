@@ -103,3 +103,11 @@ php tests/test_searchresult.php
 Both suites load `src/ECOProcessor.php`, require the Composer dependencies, and create temporary files. Neither requires a live database: the business logic suite uses a null connection, and the SearchResult suite uses a PDO test double and reads `database/schema.sql`.
 
 `test_logic.php` prints individual `[PASS]` or `[FAIL]` results; inspect those results because its final completion message and exit status do not indicate whether every assertion passed. `test_searchresult.php` throws an exception when a check fails.
+
+## Missing signoff review
+
+Click **Review Open ECOs without signoff** to compare master ECOs with the latest uploaded user_signoff snapshot. Open uses the dashboard rule: statuses other than Complete are Open. Upload a full signoff report before reviewing; existing signoff history is treated as current until the next signoff upload.
+
+PMC and QA checkboxes save tracking progress only. Selecting **Complete** separately updates the master ECO status and removes it from this review. Closing the popup refreshes the dashboard after edits. A later SearchResult import can replace the master status with the source report's status.
+
+Signoff uploads refresh snapshot membership transactionally while retaining previous signoff history. SearchResult-only imports preserve the last signoff snapshot. The new `in_latest_signoff` column is added automatically by the existing schema upgrade routine.

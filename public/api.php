@@ -102,6 +102,42 @@ try {
         /* -------------------------------------------------------------
          * 3. TOGGLE PMC / QA STATUS (AJAX Toggle)
          * ------------------------------------------------------------- */
+        case 'get_missing_signoff':
+            $rows = $pdo->query("SELECT em.eco_no, em.status, em.pmc_site, em.qa_site,
+                    COALESCE(et.pmc_result_completed, 0) AS pmc_result_completed,
+                    COALESCE(et.qa_result_completed, 0) AS qa_result_completed,
+                    et.status_progress
+                FROM eco_master em
+                LEFT JOIN eco_tracking et ON et.eco_no = em.eco_no
+                WHERE NOT EXISTS (SELECT 1 FROM eco_signoff es
+                    WHERE es.eco_no = em.eco_no AND es.in_latest_signoff = 1)
+                ORDER BY em.eco_no")->fetchAll(PDO::FETCH_ASSOC);
+            $rows = array_values(array_filter($rows, static function ($row) {
+                return ECOProcessor::statusToAgileStatus($row['status']) === 'Open';
+            }));
+            jsonResponse(['success' => true, 'records' => $rows]);
+            break;
+
+        case 'complete_missing_signoff':
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                jsonResponse(['success' => false, 'message' => 'POST required.'], 405);
+            }
+            $ecoNo = ECOProcessor::normalizeEcoNo($_POST['eco_no'] ?? '');
+            $pdo->beginTransaction();
+            $stmt = $pdo->prepare('SELECT status FROM eco_master WHERE eco_no = ? FOR UPDATE');
+            $stmt->execute([$ecoNo]);
+            $master = $stmt->fetch(PDO::FETCH_ASSOC);
+            $stmt = $pdo->prepare('SELECT 1 FROM eco_signoff WHERE eco_no = ? AND in_latest_signoff = 1');
+            $stmt->execute([$ecoNo]);
+            if (!$master || ECOProcessor::statusToAgileStatus($master['status']) !== 'Open' || $stmt->fetchColumn()) {
+                $pdo->rollBack();
+                jsonResponse(['success' => false, 'message' => 'Record is no longer Open and missing from signoff. Refresh the list.'], 409);
+            }
+            $stmt = $pdo->prepare("UPDATE eco_master SET status = 'Complete', status_in_agile = 'Closed' WHERE eco_no = ?");
+            $stmt->execute([$ecoNo]);
+            $pdo->commit();
+            jsonResponse(['success' => true, 'message' => 'ECO status changed to Complete.']);
+            break;
         case 'toggle_status':
             $ecoNo = ECOProcessor::normalizeEcoNo($_POST['eco_no'] ?? $_GET['eco_no'] ?? '');
             $field = strtolower(trim((string)($_POST['field'] ?? $_GET['field'] ?? '')));
@@ -234,7 +270,7 @@ try {
                     et.first_mo_result, et.due_date, et.status_progress,
                     et.impact_assessment_checklist, et.pending_checklist, et.updated_by, et.updated_date
                 FROM eco_master em
-                LEFT JOIN eco_signoff es ON em.eco_no = es.eco_no
+                LEFT JOIN eco_signoff es ON em.eco_no = es.eco_no AND es.in_latest_signoff = 1
                 LEFT JOIN eco_tracking et ON em.eco_no = et.eco_no
                 WHERE em.eco_no = ?
                 LIMIT 1
@@ -347,6 +383,7 @@ try {
             break;
     }
 } catch (Throwable $e) {
+    if ($pdo->inTransaction()) $pdo->rollBack();
     error_log("API Error [{$action}]: " . $e->getMessage());
     jsonResponse([
         'success' => false,

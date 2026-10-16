@@ -91,7 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     continue;
                 }
 
-                $ecoNo = trim((string)($row[$headerMap['change number']] ?? ''));
+                $ecoNo = ECOProcessor::normalizeEcoNo($row[$headerMap['change number']] ?? '');
                 $internalStatus = ECOProcessor::cleanStatus((string)($row[$headerMap['status']] ?? ''));
 
                 if ($ecoNo === '') {
@@ -112,6 +112,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$validRows && !$invalidRows) {
                 $errors[] = 'No signoff data rows were found in the report.';
             } elseif (!$invalidRows) {
+                ECOProcessor::ensureSchema($pdo);
                 $findEco = $pdo->prepare('SELECT 1 FROM eco_master WHERE eco_no = ? LIMIT 1');
                 $findDuplicate = $pdo->prepare(
                     'SELECT 1 FROM eco_signoff
@@ -120,7 +121,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 );
                 $insert = $pdo->prepare(
                     'INSERT INTO eco_signoff (eco_no, internal_status)
-                     VALUES (?, ?)'
+                     VALUES (?, ?) ON DUPLICATE KEY UPDATE internal_status = VALUES(internal_status), in_latest_signoff = 1'
                 );
 
                 $inserted = 0;
@@ -129,6 +130,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo->beginTransaction();
 
                 try {
+                    $pdo->exec("UPDATE eco_signoff SET in_latest_signoff = 0");
                     foreach ($validRows as $record) {
                         $findEco->execute([$record['eco_no']]);
                         if (!$findEco->fetchColumn()) {
@@ -142,6 +144,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         ];
                         $findDuplicate->execute($values);
                         if ($findDuplicate->fetchColumn()) {
+                            $pdo->prepare('UPDATE eco_signoff SET in_latest_signoff = 1 WHERE eco_no = ?')->execute([$record['eco_no']]);
                             $duplicates++;
                             continue;
                         }

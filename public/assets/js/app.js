@@ -4,6 +4,104 @@
  */
 
 document.addEventListener('DOMContentLoaded', function () {
+    const reviewModal = document.getElementById('missingSignoffModal');
+    const reviewRows = document.getElementById('missingSignoffRows');
+    const reviewMessage = document.getElementById('missingSignoffMessage');
+    let reviewChanged = false;
+    async function reviewRequest(action, values) {
+        const options = values ? {method: 'POST', body: new URLSearchParams(values)} : {};
+        const response = await fetch(`api.php?action=${action}`, options);
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.message || 'Request failed.');
+        return data;
+    }
+    async function loadReview() {
+        reviewMessage.textContent = 'Loading...';
+        reviewRows.replaceChildren();
+        try {
+            const data = await reviewRequest('get_missing_signoff');
+            reviewMessage.textContent = data.records.length ? `${data.records.length} ECO(s) to review.` : 'No Open ECOs are missing from user_signoff.';
+            for (const record of data.records) {
+                const row = document.createElement('tr');
+                const cell = text => {
+                    const td = document.createElement('td');
+                    td.textContent = text;
+                    row.appendChild(td);
+                    return td;
+                };
+                cell(record.eco_no);
+                const checks = [];
+                let progress;
+                for (const field of ['pmc', 'qa']) {
+                    const td = cell('');
+                    const label = document.createElement('label');
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.checked = Number(record[`${field}_result_completed`]) === 1;
+                    checkbox.setAttribute('aria-label', `${record.eco_no} ${field.toUpperCase()} tracking completed`);
+                    label.append(checkbox, document.createTextNode(` ${record[`${field}_site`] || 'No site'}`));
+                    td.appendChild(label);
+                    checks.push(checkbox);
+                    checkbox.addEventListener('change', async () => {
+                        const previous = !checkbox.checked;
+                        checks.forEach(control => control.disabled = true);
+                        status.disabled = true;
+                        try {
+                            const result = await reviewRequest('toggle_status', {eco_no: record.eco_no, field, updated_by: 'Signoff Review'});
+                            checkbox.checked = Number(result[`${field}_result_completed`]) === 1;
+                            progress.textContent = result.status_progress;
+                            reviewChanged = true;
+                        } catch (error) {
+                            checkbox.checked = previous;
+                            reviewMessage.textContent = error.message;
+                        } finally {
+                            checks.forEach(control => control.disabled = false);
+                            status.disabled = false;
+                        }
+                    });
+                }
+                progress = cell(record.status_progress || 'Pending PMC');
+                const status = document.createElement('select');
+                status.className = 'form-control';
+                status.setAttribute('aria-label', `${record.eco_no} status`);
+                for (const value of ['Open', 'Complete']) status.add(new Option(value, value));
+                cell('').appendChild(status);
+                status.addEventListener('change', async () => {
+                    if (status.value !== 'Complete') return;
+                    status.disabled = true;
+                    checks.forEach(control => control.disabled = true);
+                    try {
+                        await reviewRequest('complete_missing_signoff', {eco_no: record.eco_no});
+                        reviewChanged = true;
+                        await loadReview();
+                    } catch (error) {
+                        reviewMessage.textContent = error.message;
+                        status.value = 'Open';
+                        status.disabled = false;
+                        checks.forEach(control => control.disabled = false);
+                    }
+                });
+                reviewRows.appendChild(row);
+            }
+        } catch (error) { reviewMessage.textContent = error.message; }
+    }
+    document.getElementById('openMissingSignoff').addEventListener('click', () => {
+        reviewModal.classList.add('active');
+        document.getElementById('closeMissingSignoff').focus();
+        loadReview();
+    });
+    function closeReview() {
+        if (reviewModal.querySelector('input:disabled, select:disabled')) return;
+        reviewModal.classList.remove('active');
+        if (reviewChanged) window.location.reload();
+        else document.getElementById('openMissingSignoff').focus();
+    }
+    document.getElementById('closeMissingSignoff').addEventListener('click', closeReview);
+    reviewModal.addEventListener('click', event => { if (event.target === reviewModal) closeReview(); });
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && reviewModal.classList.contains('active')) closeReview();
+    });
+
     // -------------------------------------------------------------
     // Toast Notification Utility
     // -------------------------------------------------------------

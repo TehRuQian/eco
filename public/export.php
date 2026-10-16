@@ -133,7 +133,7 @@ $sql = "
         em.cut_in_date,
         em.completed_date
     FROM eco_master em
-    LEFT JOIN eco_signoff es ON em.eco_no = es.eco_no
+    LEFT JOIN eco_signoff es ON em.eco_no = es.eco_no AND es.in_latest_signoff = 1
     LEFT JOIN eco_tracking et ON em.eco_no = et.eco_no
     {$whereClause}
     ORDER BY em.year DESC, em.ww DESC, em.eco_no DESC
