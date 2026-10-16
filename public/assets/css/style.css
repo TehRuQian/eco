@@ -759,6 +759,6 @@ textarea.form-control {
 /* Keep PMC and QA controls at the same baseline in each row. */
 table.eco-table td.signoff-cell { vertical-align: bottom; padding-top: 14px; padding-bottom: 14px; }
 .signoff-cell .site-badge { line-height: 18px; min-height: 18px; margin-bottom: 6px; }
-.signoff-cell .toggle-btn { width: 90px; min-height: 32px; box-sizing: border-box; }
-.signoff-cell .signoff-review-check { width: 120px; min-height: 32px; box-sizing: border-box; justify-content: center; }
+
+
 .signoff-review-table .signoff-cell .site-badge { min-height: 39px; line-height: 19.5px; margin-bottom: 6px; }
