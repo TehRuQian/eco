@@ -727,15 +727,32 @@ textarea.form-control {
 }
 
 /* Signoff review uses the dashboard table, badges, and form controls. */
-.signoff-review-box { max-width: 1000px; }
+#missingSignoffModal { padding: 24px; }
+.signoff-review-box { width: 100%; max-width: 1440px; max-height: 92vh; max-height: 92dvh; display: flex; flex-direction: column; overflow: hidden; }
+.signoff-review-box .modal-header { flex-shrink: 0; }
+.signoff-review-box .modal-body { display: flex; flex-direction: column; min-height: 0; overflow: hidden; padding: 20px 24px 24px; }
 .signoff-review-help { color: var(--text-secondary); font-size: 13px; line-height: 1.6; margin: 0 0 12px; }
 .signoff-review-message { color: var(--text-secondary); font-size: 13px; font-weight: 600; margin: 0 0 14px; }
-.signoff-review-table { border-radius: var(--radius-md); }
-.signoff-review-table .table-responsive { max-height: 55vh; }
-.signoff-review-table .eco-table { min-width: 680px; }
+.signoff-review-table { border-radius: var(--radius-md); min-height: 0; }
+.signoff-review-table .table-responsive { max-height: 68vh; max-height: 68dvh; overflow: auto; }
+.signoff-review-table .eco-table { min-width: 850px; table-layout: fixed; font-size: 14px; }
+.signoff-review-table .eco-table th:nth-child(1) { width: 16%; }
+.signoff-review-table .eco-table th:nth-child(2), .signoff-review-table .eco-table th:nth-child(3) { width: 25%; }
+.signoff-review-table .eco-table th:nth-child(4) { width: 19%; }
+.signoff-review-table .eco-table th:nth-child(5) { width: 15%; }
+.signoff-review-table .eco-table td { padding: 14px; }
+.signoff-review-table .site-badge { max-width: none; white-space: normal; overflow-wrap: anywhere; font-size: 13px; line-height: 1.5; margin-bottom: 8px; }
+.signoff-review-box .signoff-review-help, .signoff-review-box .signoff-review-message { flex-shrink: 0; }
 .signoff-review-eco { color: var(--brand-accent); font-weight: 700; white-space: nowrap; }
 .signoff-review-check { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 20px; font-size: 11.5px; font-weight: 700; cursor: pointer; background: var(--toggle-no-bg); color: var(--toggle-no-text); border: 1px solid var(--toggle-no-border); }
 .signoff-review-check:has(input:checked) { background: var(--toggle-yes-bg); color: var(--toggle-yes-text); border-color: #15803d; }
 .signoff-review-check:has(input:disabled) { opacity: .6; cursor: wait; }
-.signoff-review-check input { margin: 0; accent-color: #15803d; }
-.signoff-review-table .form-control { min-width: 115px; font-size: 13px; }
+.signoff-review-check input { margin: 0; width: 16px; height: 16px; accent-color: #15803d; }
+.signoff-review-table .form-control { min-width: 115px; min-height: 40px; font-size: 14px; }
+@media (max-width: 760px) {
+    #missingSignoffModal { padding: 10px; }
+    .signoff-review-box { max-height: 95vh; max-height: 95dvh; }
+    .signoff-review-box .modal-header, .signoff-review-box .modal-body { padding: 14px; }
+    .signoff-review-box .modal-header h3 { font-size: 16px; }
+    .signoff-review-table .table-responsive { max-height: 65vh; max-height: 65dvh; }
+}
