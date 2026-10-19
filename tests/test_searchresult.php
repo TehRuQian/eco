@@ -78,7 +78,10 @@ class ImportTestStatement extends PDOStatement {
 
 check(ECOProcessor::normalizeImportStatus(' reviewer1 # No Controller '), 'Reviewer 1', 'Normalize reviewer status for ENUM');
 check(ECOProcessor::normalizeImportStatus('COMPLETE'), 'Complete', 'Canonical Complete status');
-foreach (['Open', 'Closed', '', '# No Controller', 'Reviewer 3'] as $invalidStatus) {
+check(ECOProcessor::normalizeImportStatus('# No Controller'), null, 'Standalone controller marker is skipped');
+check(ECOProcessor::normalizeImportStatus(' #no   controller '), null, 'Standalone marker tolerates case and whitespace');
+check(ECOProcessor::normalizeImportStatus('Reviewer 2 # No Controller'), 'Reviewer 2', 'Controller suffix preserves reviewer stage');
+foreach (['Open', 'Closed', 'Reviewer 3'] as $invalidStatus) {
     try {
         ECOProcessor::normalizeImportStatus($invalidStatus, 'SearchResult row 2 (ECO001)');
         throw new RuntimeException('Unsupported status was accepted: ' . $invalidStatus);
@@ -101,7 +104,10 @@ try {
     foreach (['csv', 'xlsx', 'xls'] as $extension) {
         $file = tempnam(sys_get_temp_dir(), 'eco_mapping_');
         $files[] = $file;
-        $rows = [$headers, $values];
+        $skipped = $values;
+        $skipped[2] = 'ECO_SKIPPED';
+        $skipped[5] = '# No Controller';
+        $rows = [$headers, $values, $skipped];
         if ($extension === 'csv') {
             $handle = fopen($file, 'w');
             foreach ($rows as $row) fputcsv($handle, $row, ',', '"', '');
@@ -124,6 +130,7 @@ try {
         $result = $processor->processImport($file, 'SearchResult.' . $extension);
         check($result['success'], true, "$extension insert succeeds");
         check($result['stats']['master_inserted'], 1, "$extension new ECO");
+        check(isset($db->master['ECO_SKIPPED']), false, "$extension blank cleaned status row skipped");
         $record = $db->master['ECO001'];
         foreach (['wip_action' => $values[10], 'fg_action' => $values[6], 'warehouse_action' => 'No Impact',
             'cut_in_first_mo' => 'MO123456', 'cut_in_date' => '2026-10-14 00:00:00',

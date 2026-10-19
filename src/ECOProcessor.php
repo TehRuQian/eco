@@ -268,9 +268,12 @@ class ECOProcessor
     }
 
     /** Normalize imported master statuses to the configured reviewer ENUM values. */
-    public static function normalizeImportStatus(?string $rawStatus, string $context = ''): string
+    public static function normalizeImportStatus(?string $rawStatus, string $context = ''): ?string
     {
         $status = self::cleanStatus($rawStatus);
+        if ($status === '') {
+            return null;
+        }
         $status = preg_replace('/^reviewer\s*([12])$/i', 'Reviewer $1', $status);
         foreach (['Controller', 'Reviewer 1', 'Reviewer 2', 'Complete'] as $allowed) {
             if (strcasecmp($status, $allowed) === 0) {
@@ -688,6 +691,7 @@ class ECOProcessor
             // Raw Status & Cleaned Status (without # No Controller)
             $rawStatus = (string)($row[$masterMap['status']] ?? '');
             $cleanStatus = self::normalizeImportStatus($rawStatus, "SearchResult row " . ($i + 1) . " ({$ecoNo})");
+            if ($cleanStatus === null) continue;
 
             $statusInAgile = self::statusToAgileStatus($cleanStatus);
 
@@ -738,10 +742,12 @@ class ECOProcessor
 
                 $rawInternalStatus = (string)($row[$signoffMap['internal_status']] ?? '');
                 $internalStatus    = self::cleanStatus($rawInternalStatus);
+                if ($internalStatus === '') continue;
                 // Signoff represents the latest signoff record for each ECO
                 $signoffData[$ecoNo] = [
                     'eco_no'             => $ecoNo,
                     'internal_status'    => $internalStatus,
+                    'raw_internal_status' => $rawInternalStatus,
                 ];
             }
         }
@@ -924,7 +930,7 @@ class ECOProcessor
                         // Unknown SearchResult fields remain NULL until a master import.
                         $newMaster = array_filter([
                             'eco_no' => $ecoNo,
-                            'status' => self::normalizeImportStatus($s['internal_status'], "Signoff ECO {$ecoNo}"),
+                            'status' => self::normalizeImportStatus($s['raw_internal_status'], "Signoff ECO {$ecoNo}"),
                             'status_in_agile' => self::statusToAgileStatus($s['internal_status']),
                         ], fn($k) => in_array($k, $masterCols, true), ARRAY_FILTER_USE_KEY);
                         $columns = '`' . implode('`, `', array_keys($newMaster)) . '`';
