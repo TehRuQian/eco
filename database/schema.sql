@@ -36,6 +36,9 @@ CREATE TABLE IF NOT EXISTS `eco_master` (
     `year`                       INT NULL,
     `ww`                         INT NULL COMMENT 'Thursday-based work week',
     `month`                      VARCHAR(20) NULL,
+    `archived_at`                DATETIME NULL,
+    `archived_by`                VARCHAR(100) NULL,
+    `archive_reason`             TEXT NULL,
     `created_at`                 TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updated_at`                 TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (`eco_no`),
@@ -57,6 +60,9 @@ CREATE TABLE IF NOT EXISTS `eco_signoff` (
     `status_changed`             TINYINT(1) NOT NULL DEFAULT 0 COMMENT '1 if status change detected',
     `status_changed_at`          DATETIME NULL,
     `is_unmatched`               TINYINT(1) NOT NULL DEFAULT 0 COMMENT '1 if exists only in signoff file',
+    `archived_at`                DATETIME NULL,
+    `archived_by`                VARCHAR(100) NULL,
+    `archive_reason`             TEXT NULL,
     `created_at`                 TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updated_at`                 TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (`eco_no`),
@@ -89,3 +95,14 @@ CREATE TABLE IF NOT EXISTS `eco_tracking` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 SET FOREIGN_KEY_CHECKS = 1;
+
+-- Archive/restore audit history is retained across imports and restores.
+CREATE TABLE IF NOT EXISTS eco_archive_history (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    eco_no VARCHAR(100) NOT NULL,
+    action VARCHAR(10) NOT NULL,
+    actor VARCHAR(100) NOT NULL,
+    reason TEXT NOT NULL,
+    performed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_archive_history_eco (eco_no)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -16,7 +16,7 @@ if (!$pdo) {
 }
 
 // Build query based on optional filters
-$where = [];
+$where = ['em.archived_at IS NULL'];
 $params = [];
 
 // Search filter

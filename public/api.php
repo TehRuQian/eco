@@ -8,6 +8,7 @@ error_reporting(E_ALL);
 ini_set('display_errors', '0');
 ini_set('log_errors', '1');
 
+session_start();
 header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/../config/db.php';
@@ -33,6 +34,50 @@ ECOProcessor::ensureSchema($pdo);
 
 try {
     switch ($action) {
+        case 'get_archived_ecos':
+            $rows = $pdo->query('SELECT eco_no, subject, archived_at, archived_by, archive_reason
+                FROM eco_master WHERE archived_at IS NOT NULL ORDER BY archived_at DESC, eco_no')->fetchAll(PDO::FETCH_ASSOC);
+            jsonResponse(['success' => true, 'records' => $rows]);
+            break;
+
+        case 'archive_eco':
+        case 'restore_eco':
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                jsonResponse(['success' => false, 'message' => 'POST required.'], 405);
+            }
+            $csrf = (string)($_POST['csrf_token'] ?? '');
+            if (empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $csrf)) {
+                jsonResponse(['success' => false, 'message' => 'Session expired. Reload the page and try again.'], 403);
+            }
+            $ecoNo = ECOProcessor::normalizeEcoNo($_POST['eco_no'] ?? '');
+            $actor = trim((string)($_POST['actor'] ?? ''));
+            $reason = trim((string)($_POST['reason'] ?? ''));
+            if ($ecoNo === '' || $actor === '' || $reason === '' || mb_strlen($actor) > 100 || mb_strlen($reason) > 2000) {
+                jsonResponse(['success' => false, 'message' => 'ECO, name (up to 100 characters), and reason (up to 2000 characters) are required.'], 400);
+            }
+            $pdo->beginTransaction();
+            $stmt = $pdo->prepare('SELECT archived_at FROM eco_master WHERE eco_no = ? FOR UPDATE');
+            $stmt->execute([$ecoNo]);
+            $record = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$record) {
+                $pdo->rollBack();
+                jsonResponse(['success' => false, 'message' => 'ECO not found.'], 404);
+            }
+            $archiving = $action === 'archive_eco';
+            if (($record['archived_at'] !== null) === $archiving) {
+                $pdo->rollBack();
+                jsonResponse(['success' => false, 'message' => 'ECO state changed. Reload the page.'], 409);
+            }
+            $stmt = $archiving
+                ? $pdo->prepare('UPDATE eco_master SET archived_at = NOW(), archived_by = ?, archive_reason = ? WHERE eco_no = ?')
+                : $pdo->prepare('UPDATE eco_master SET archived_at = NULL, archived_by = NULL, archive_reason = NULL WHERE eco_no = ?');
+            $stmt->execute($archiving ? [$actor, $reason, $ecoNo] : [$ecoNo]);
+            $stmt = $pdo->prepare('INSERT INTO eco_archive_history (eco_no, action, actor, reason) VALUES (?, ?, ?, ?)');
+            $stmt->execute([$ecoNo, $archiving ? 'archive' : 'restore', $actor, $reason]);
+            $pdo->commit();
+            jsonResponse(['success' => true, 'message' => $archiving ? 'ECO archived.' : 'ECO restored.']);
+            break;
+
 
         /* -------------------------------------------------------------
          * 1. PRE-FLIGHT VALIDATION
@@ -109,7 +154,7 @@ try {
                     et.status_progress
                 FROM eco_master em
                 LEFT JOIN eco_tracking et ON et.eco_no = em.eco_no
-                WHERE NOT EXISTS (SELECT 1 FROM eco_signoff es
+                WHERE em.archived_at IS NULL AND NOT EXISTS (SELECT 1 FROM eco_signoff es
                     WHERE es.eco_no = em.eco_no AND es.in_latest_signoff = 1)
                 ORDER BY em.eco_no")->fetchAll(PDO::FETCH_ASSOC);
             $rows = array_map([ECOProcessor::class, 'withSiteLabels'], $rows);
@@ -129,7 +174,7 @@ try {
                 jsonResponse(['success' => false, 'message' => 'Invalid ECO status.'], 400);
             }
             $pdo->beginTransaction();
-            $stmt = $pdo->prepare('SELECT status FROM eco_master WHERE eco_no = ? FOR UPDATE');
+            $stmt = $pdo->prepare('SELECT status FROM eco_master WHERE eco_no = ? AND archived_at IS NULL FOR UPDATE');
             $stmt->execute([$ecoNo]);
             $master = $stmt->fetch(PDO::FETCH_ASSOC);
             $stmt = $pdo->prepare('SELECT 1 FROM eco_signoff WHERE eco_no = ? AND in_latest_signoff = 1');
@@ -144,6 +189,12 @@ try {
             jsonResponse(['success' => true, 'status' => $newStatus, 'message' => 'ECO status saved.']);
             break;
         case 'toggle_status':
+            $activeEco = ECOProcessor::normalizeEcoNo($_POST['eco_no'] ?? $_GET['eco_no'] ?? '');
+            $activeCheck = $pdo->prepare('SELECT 1 FROM eco_master WHERE eco_no = ? AND archived_at IS NULL');
+            $activeCheck->execute([$activeEco]);
+            if (!$activeCheck->fetchColumn()) {
+                jsonResponse(['success' => false, 'message' => 'ECO is archived or unavailable. Restore it before editing.'], 409);
+            }
             $ecoNo = ECOProcessor::normalizeEcoNo($_POST['eco_no'] ?? $_GET['eco_no'] ?? '');
             $field = strtolower(trim((string)($_POST['field'] ?? $_GET['field'] ?? '')));
 
@@ -210,6 +261,12 @@ try {
          * 4. UPDATE MANUAL TRACKING DETAILS (Modal Edit)
          * ------------------------------------------------------------- */
         case 'update_tracking':
+            $activeEco = ECOProcessor::normalizeEcoNo($_POST['eco_no'] ?? $_GET['eco_no'] ?? '');
+            $activeCheck = $pdo->prepare('SELECT 1 FROM eco_master WHERE eco_no = ? AND archived_at IS NULL');
+            $activeCheck->execute([$activeEco]);
+            if (!$activeCheck->fetchColumn()) {
+                jsonResponse(['success' => false, 'message' => 'ECO is archived or unavailable. Restore it before editing.'], 409);
+            }
             $ecoNo = ECOProcessor::normalizeEcoNo($_POST['eco_no'] ?? '');
             if ($ecoNo === '') {
                 jsonResponse(['success' => false, 'message' => 'ECO number is required.'], 400);
@@ -277,7 +334,7 @@ try {
                 FROM eco_master em
                 LEFT JOIN eco_signoff es ON em.eco_no = es.eco_no AND es.in_latest_signoff = 1
                 LEFT JOIN eco_tracking et ON em.eco_no = et.eco_no
-                WHERE em.eco_no = ?
+                WHERE em.eco_no = ? AND em.archived_at IS NULL
                 LIMIT 1
             ";
             $stmt = $pdo->prepare($sql);
@@ -302,12 +359,12 @@ try {
          * 6. GET DASHBOARD SUMMARY (KPIS)
          * ------------------------------------------------------------- */
         case 'get_dashboard_summary':
-            $totalStmt = $pdo->query("SELECT COUNT(*) FROM eco_master");
+            $totalStmt = $pdo->query("SELECT COUNT(*) FROM eco_master WHERE archived_at IS NULL");
             $totalEco = (int)$totalStmt->fetchColumn();
 
             $agileOpen = 0;
             $agileClosed = 0;
-            $agileStatusStmt = $pdo->query("SELECT status FROM eco_master");
+            $agileStatusStmt = $pdo->query("SELECT status FROM eco_master WHERE archived_at IS NULL");
             while ($statusRow = $agileStatusStmt->fetch(PDO::FETCH_ASSOC)) {
                 if (ECOProcessor::statusToAgileStatus($statusRow['status'] ?? null) === 'Closed') {
                     $agileClosed++;
@@ -318,38 +375,32 @@ try {
 
             $pendingPmcStmt = $pdo->query("
                 SELECT COUNT(*) FROM eco_tracking
-                WHERE status_progress = 'Pending PMC' OR (pmc_result_completed = 0 AND qa_result_completed = 0)
-            ");
+                WHERE EXISTS (SELECT 1 FROM eco_master em WHERE em.eco_no = eco_tracking.eco_no AND em.archived_at IS NULL) AND (status_progress = 'Pending PMC' OR (pmc_result_completed = 0 AND qa_result_completed = 0)) ");
             $pendingPmc = (int)$pendingPmcStmt->fetchColumn();
 
             $pendingQaStmt = $pdo->query("
                 SELECT COUNT(*) FROM eco_tracking
-                WHERE status_progress = 'Pending QA' OR (pmc_result_completed = 1 AND qa_result_completed = 0)
-            ");
+                WHERE EXISTS (SELECT 1 FROM eco_master em WHERE em.eco_no = eco_tracking.eco_no AND em.archived_at IS NULL) AND (status_progress = 'Pending QA' OR (pmc_result_completed = 1 AND qa_result_completed = 0)) ");
             $pendingQa = (int)$pendingQaStmt->fetchColumn();
 
             $completedStmt = $pdo->query("
                 SELECT COUNT(*) FROM eco_tracking
-                WHERE status_progress = 'Completed' OR (pmc_result_completed = 1 AND qa_result_completed = 1)
-            ");
+                WHERE EXISTS (SELECT 1 FROM eco_master em WHERE em.eco_no = eco_tracking.eco_no AND em.archived_at IS NULL) AND (status_progress = 'Completed' OR (pmc_result_completed = 1 AND qa_result_completed = 1)) ");
             $completed = (int)$completedStmt->fetchColumn();
 
             $overdueStmt = $pdo->query("
                 SELECT COUNT(*) FROM eco_tracking
-                WHERE due_date < CURDATE() AND status_progress != 'Completed'
-            ");
+                WHERE EXISTS (SELECT 1 FROM eco_master em WHERE em.eco_no = eco_tracking.eco_no AND em.archived_at IS NULL) AND (due_date < CURDATE() AND status_progress != 'Completed') ");
             $overdue = (int)$overdueStmt->fetchColumn();
 
             $statusChangedStmt = $pdo->query("
                 SELECT COUNT(*) FROM eco_signoff
-                WHERE status_changed = 1
-            ");
+                WHERE EXISTS (SELECT 1 FROM eco_master em WHERE em.eco_no = eco_signoff.eco_no AND em.archived_at IS NULL) AND (status_changed = 1) ");
             $statusChanged = (int)$statusChangedStmt->fetchColumn();
 
             $unmatchedStmt = $pdo->query("
                 SELECT COUNT(*) FROM eco_signoff
-                WHERE is_unmatched = 1
-            ");
+                WHERE EXISTS (SELECT 1 FROM eco_master em WHERE em.eco_no = eco_signoff.eco_no AND em.archived_at IS NULL) AND (is_unmatched = 1) ");
             $unmatched = (int)$unmatchedStmt->fetchColumn();
 
             jsonResponse([

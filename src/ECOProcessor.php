@@ -81,6 +81,9 @@ class ECOProcessor
                         `ww` INT NULL,
                         `month` VARCHAR(20) NULL,
                         `created_at` DATETIME NULL,
+                        `archived_at` DATETIME NULL,
+                        `archived_by` VARCHAR(100) NULL,
+                        `archive_reason` TEXT NULL,
                         `updated_at` DATETIME NULL
                     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
                 ");
@@ -88,6 +91,9 @@ class ECOProcessor
             } catch (Throwable $e) {}
         } else {
             $requiredMaster = [
+                'archived_at' => 'DATETIME NULL',
+                'archived_by' => 'VARCHAR(100) NULL',
+                'archive_reason' => 'TEXT NULL',
                 'pmc_name' => 'TEXT NULL',
                 'pmc_email' => 'TEXT NULL',
                 'qa_name' => 'TEXT NULL',
@@ -128,6 +134,9 @@ class ECOProcessor
                         `is_unmatched` TINYINT(1) NOT NULL DEFAULT 0,
                         `in_latest_signoff` TINYINT(1) NOT NULL DEFAULT 1,
                         `created_at` DATETIME NULL,
+                        `archived_at` DATETIME NULL,
+                        `archived_by` VARCHAR(100) NULL,
+                        `archive_reason` TEXT NULL,
                         `updated_at` DATETIME NULL
                     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
                 ");
@@ -224,6 +233,15 @@ class ECOProcessor
             }
         } catch (Throwable $e) {}
 
+        $pdo->exec("CREATE TABLE IF NOT EXISTS eco_archive_history (
+            id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            eco_no VARCHAR(100) NOT NULL,
+            action VARCHAR(10) NOT NULL,
+            actor VARCHAR(100) NOT NULL,
+            reason TEXT NOT NULL,
+            performed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_archive_history_eco (eco_no)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
         return ['success' => true, 'actions' => $actions];
     }
 
