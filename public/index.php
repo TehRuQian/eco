@@ -732,20 +732,13 @@ if ($pdo) {
     <div class="archive-dialog-heading"><h2>Archived ECOs</h2><button type="button" data-close-archive-dialog class="btn btn-outline btn-sm">Close</button></div>
     <p>Archived ECOs are excluded from the dashboard and normal exports. Their tracking and signoff history is retained.</p>
     <p id="archivedEcosMessage" role="status"></p>
-    <div class="archive-list-scroll"><table class="eco-table"><thead><tr><th>ECO</th><th>Subject</th><th>Archived at</th><th>By</th><th>Reason</th><th>Action</th></tr></thead><tbody id="archivedEcosRows"></tbody></table></div>
+    <div class="archive-list-scroll"><table class="eco-table"><thead><tr><th>ECO</th><th>Subject</th><th>Archived at</th><th>Action</th></tr></thead><tbody id="archivedEcosRows"></tbody></table></div>
 </dialog>
-<dialog id="archiveActionDialog" class="archive-dialog archive-action-dialog">
-    <form id="archiveActionForm">
-        <div class="archive-dialog-heading"><h2 id="archiveActionTitle">Archive ECO</h2><button type="button" data-close-archive-dialog class="btn btn-outline btn-sm">Cancel</button></div>
-        <p id="archiveActionDescription"></p>
-        <input type="hidden" name="csrf_token" value="<?= h($_SESSION['csrf_token']) ?>">
-        <input type="hidden" name="eco_no">
-        <input type="hidden" name="action" value="archive_eco">
-        <label>Your name <input name="actor" required maxlength="100" autocomplete="name"></label>
-        <label>Reason <textarea name="reason" required maxlength="2000" rows="3"></textarea></label>
-        <p id="archiveActionError" role="alert"></p>
-        <button type="submit" id="archiveActionSubmit" class="btn btn-primary">Archive ECO</button>
-    </form>
+<input type="hidden" id="archiveCsrfToken" value="<?= h($_SESSION['csrf_token']) ?>">
+<dialog id="archiveConfirmationDialog" class="archive-dialog archive-action-dialog" aria-labelledby="archiveConfirmationTitle" aria-describedby="archiveConfirmationMessage">
+    <h2 id="archiveConfirmationTitle">ECO archived</h2>
+    <p id="archiveConfirmationMessage" role="status"></p>
+    <button type="button" data-close-archive-dialog class="btn btn-primary" autofocus>OK</button>
 </dialog>
 <script src="assets/js/app.js?v=<?= (int)filemtime(__DIR__ . '/assets/js/app.js') ?>"></script>
 </body>

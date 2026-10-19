@@ -5,26 +5,39 @@
 
 document.addEventListener('DOMContentLoaded', function () {
     const archivedDialog = document.getElementById('archivedEcosDialog');
-    const archiveDialog = document.getElementById('archiveActionDialog');
-    const archiveForm = document.getElementById('archiveActionForm');
+    const archiveConfirmation = document.getElementById('archiveConfirmationDialog');
+    let archiveRequestPending = false;
     document.querySelectorAll('[data-close-archive-dialog]').forEach(button => {
         button.addEventListener('click', () => button.closest('dialog').close());
     });
-    const openArchiveAction = (ecoNo, restoring = false) => {
-        archiveForm.reset();
-        archiveForm.elements.eco_no.value = ecoNo;
-        archiveForm.elements.action.value = restoring ? 'restore_eco' : 'archive_eco';
-        const verb = restoring ? 'Restore' : 'Archive';
-        document.getElementById('archiveActionTitle').textContent = `${verb} ${ecoNo}`;
-        document.getElementById('archiveActionSubmit').textContent = `${verb} ECO`;
-        document.getElementById('archiveActionDescription').textContent = restoring
-            ? 'Return this ECO to the dashboard with its saved tracking and signoff history.'
-            : 'Hide this ECO from the dashboard and exports. Re-importing will keep it archived. You can restore it later.';
-        document.getElementById('archiveActionError').textContent = '';
-        archiveDialog.showModal();
-    };
+    archiveConfirmation?.addEventListener('close', () => window.location.reload());
+    async function changeArchiveState(ecoNo, restoring, button) {
+        if (archiveRequestPending) return;
+        archiveRequestPending = true;
+        button.disabled = true;
+        try {
+            const body = new URLSearchParams({
+                action: restoring ? 'restore_eco' : 'archive_eco',
+                eco_no: ecoNo,
+                csrf_token: document.getElementById('archiveCsrfToken').value
+            });
+            const response = await fetch('api.php', {method: 'POST', body});
+            const data = await response.json();
+            if (!response.ok || !data.success) throw new Error(data.message || 'Archive action failed.');
+            document.getElementById('archiveConfirmationTitle').textContent = restoring ? 'ECO restored' : 'ECO archived';
+            document.getElementById('archiveConfirmationMessage').textContent =
+                `${ecoNo} has been ${restoring ? 'restored' : 'archived'} successfully.`;
+            archiveConfirmation.showModal();
+        } catch (error) {
+            showToast(error.message, 'error');
+            const message = document.getElementById('archivedEcosMessage');
+            if (archivedDialog.open) message.textContent = error.message;
+            archiveRequestPending = false;
+            button.disabled = false;
+        }
+    }
     document.querySelectorAll('.archive-eco-button').forEach(button => {
-        button.addEventListener('click', () => openArchiveAction(button.dataset.eco));
+        button.addEventListener('click', () => changeArchiveState(button.dataset.eco, false, button));
     });
     document.getElementById('openArchivedEcos')?.addEventListener('click', async () => {
         archivedDialog.showModal();
@@ -39,7 +52,7 @@ document.addEventListener('DOMContentLoaded', function () {
             message.textContent = data.records.length ? `${data.records.length} archived ECO(s).` : 'No archived ECOs.';
             for (const record of data.records) {
                 const row = document.createElement('tr');
-                for (const key of ['eco_no', 'subject', 'archived_at', 'archived_by', 'archive_reason']) {
+                for (const key of ['eco_no', 'subject', 'archived_at']) {
                     const cell = document.createElement('td');
                     cell.textContent = record[key] || '—';
                     row.append(cell);
@@ -49,7 +62,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 restore.type = 'button';
                 restore.className = 'btn btn-outline btn-sm';
                 restore.textContent = 'Restore';
-                restore.addEventListener('click', () => openArchiveAction(record.eco_no, true));
+                restore.addEventListener('click', () => changeArchiveState(record.eco_no, true, restore));
                 cell.append(restore);
                 row.append(cell);
                 rows.append(row);
@@ -58,29 +71,6 @@ document.addEventListener('DOMContentLoaded', function () {
             message.textContent = error.message;
         }
     });
-    archiveForm?.addEventListener('submit', async event => {
-        event.preventDefault();
-        const submit = document.getElementById('archiveActionSubmit');
-        const cancel = archiveDialog.querySelector('[data-close-archive-dialog]');
-        submit.disabled = true;
-        cancel.disabled = true;
-        document.getElementById('archiveActionError').textContent = '';
-        try {
-            const response = await fetch('api.php', {method: 'POST', body: new FormData(archiveForm)});
-            const data = await response.json();
-            if (!response.ok || !data.success) throw new Error(data.message || 'Archive action failed.');
-            window.location.reload();
-        } catch (error) {
-            document.getElementById('archiveActionError').textContent = error.message;
-        } finally {
-            submit.disabled = false;
-            cancel.disabled = false;
-        }
-    });
-    archiveDialog?.addEventListener('cancel', event => {
-        if (document.getElementById('archiveActionSubmit').disabled) event.preventDefault();
-    });
-
     const reviewModal = document.getElementById('missingSignoffModal');
     const reviewRows = document.getElementById('missingSignoffRows');
     const reviewMessage = document.getElementById('missingSignoffMessage');

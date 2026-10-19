@@ -129,9 +129,9 @@ This adds missing columns and backfills existing `NAME (email)` contacts. It lea
 
 ## Archive and restore ECOs
 
-Use **Archive** in a record's Action column. Enter your name and a reason, then submit. Archived records are excluded from the dashboard, summary counts, missing-signoff review, and CSV exports. Tracking and signoff records are retained. Uploading the same ECO again updates its imported data but keeps it archived.
+Click **Archive** in a record's Action column to archive it immediately. A success message confirms the ECO number; click OK to refresh the dashboard. Archived records are excluded from the dashboard, summary counts, missing-signoff review, and CSV exports. Tracking and signoff records are retained. Uploading the same ECO again updates its imported data but keeps it archived.
 
-Use **Archived ECOs** beside Reset Filters to see archived records, their archive date, name, and reason. **Restore** requires a name and reason and returns the ECO to the dashboard with its saved tracking. Archive and restore events are retained in `eco_archive_history`. Names are entered by the operator; this application does not authenticate identities or provide administrator roles. No permanent delete action is included.
+Use **Archived ECOs** beside Reset Filters to see archived records, and their archive date. Click **Restore** to return the ECO to the dashboard with its saved tracking. Archive and restore events are retained in `eco_archive_history`. No name or reason is requested. Audit entries use the generic actor `User` and an empty reason because the application does not authenticate identities or provide administrator roles. No permanent delete action is included.
 
 For an existing database, import `database/migrate_archive.sql` in phpMyAdmin (select `eco_db`, or change the script's USE statement to your DB_NAME). The application can also add these fields automatically when its database account has schema permissions. Deploy the updated `src/ECOProcessor.php`, `public/index.php`, `public/api.php`, `public/export.php`, `public/assets/js/app.js`, and `public/assets/css/style.css` together, then refresh the page. Archive/restore requests use POST and a session CSRF token; the record update and audit entry are committed in one transaction.
 

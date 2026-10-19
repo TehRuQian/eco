@@ -49,10 +49,11 @@ try {
                 jsonResponse(['success' => false, 'message' => 'Session expired. Reload the page and try again.'], 403);
             }
             $ecoNo = ECOProcessor::normalizeEcoNo($_POST['eco_no'] ?? '');
-            $actor = trim((string)($_POST['actor'] ?? ''));
-            $reason = trim((string)($_POST['reason'] ?? ''));
-            if ($ecoNo === '' || $actor === '' || $reason === '' || mb_strlen($actor) > 100 || mb_strlen($reason) > 2000) {
-                jsonResponse(['success' => false, 'message' => 'ECO, name (up to 100 characters), and reason (up to 2000 characters) are required.'], 400);
+            // No operator identity is available in this application.
+            $actor = 'User';
+            $reason = '';
+            if ($ecoNo === '') {
+                jsonResponse(['success' => false, 'message' => 'ECO number is required.'], 400);
             }
             $pdo->beginTransaction();
             $stmt = $pdo->prepare('SELECT archived_at FROM eco_master WHERE eco_no = ? FOR UPDATE');
