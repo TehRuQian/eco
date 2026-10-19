@@ -386,6 +386,10 @@ if ($pdo) {
                 <?php endforeach; ?>
             </select>
 
+            <select id="filterSortOrder" class="filter-select" aria-label="Sort ECO number">
+                <option value="desc">ECO Number: Descending</option>
+                <option value="asc">ECO Number: Ascending</option>
+            </select>
             <select id="filterWw" class="filter-select">
                 <option value="">All Work Weeks (WW)</option>
                 <?php foreach (array_keys($workWeeks) as $w): ?>

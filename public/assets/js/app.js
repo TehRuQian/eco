@@ -595,6 +595,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const filterQaCompleted = document.getElementById('filterQaCompleted');
     const filterYear = document.getElementById('filterYear');
     const filterWw = document.getElementById('filterWw');
+    const filterSortOrder = document.getElementById('filterSortOrder');
     const resetFiltersBtn = document.getElementById('resetFiltersBtn');
     const rowCountEl = document.getElementById('tableRowCount');
     let kpiAgileStatus = '';
@@ -713,6 +714,22 @@ document.addEventListener('DOMContentLoaded', function () {
         const yr = filterYear ? filterYear.value : '';
         const ww = filterWw ? filterWw.value : '';
 
+        const body = document.getElementById('ecoTableBody');
+        if (body && filterSortOrder) {
+            const direction = filterSortOrder.value === 'asc' ? 1 : -1;
+            const ordered = Array.from(body.querySelectorAll('tr.eco-row')).sort((a, b) => {
+                const left = (a.dataset.eco || '').toUpperCase();
+                const right = (b.dataset.eco || '').toUpperCase();
+                return (left < right ? -1 : left > right ? 1 : 0) * direction;
+            });
+            const fragment = document.createDocumentFragment();
+            ordered.forEach(row => {
+                const detail = document.getElementById('detail-' + row.dataset.eco);
+                fragment.append(row);
+                if (detail) fragment.append(detail);
+            });
+            body.append(fragment);
+        }
         const rows = document.querySelectorAll('tr.eco-row');
         let visibleCount = 0;
         let agileOpenCount = 0;
@@ -787,7 +804,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     [searchBox, filterCustomer, filterProject, filterAgileStatus,
-     filterTrackerStatus, filterPmcCompleted, filterQaCompleted, filterYear, filterWw].forEach(el => {
+     filterTrackerStatus, filterPmcCompleted, filterQaCompleted, filterYear, filterWw, filterSortOrder].forEach(el => {
         if (el) {
             const onFilterChange = function () {
                 if (el === filterAgileStatus) kpiAgileStatus = '';
@@ -809,6 +826,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (filterQaCompleted) filterQaCompleted.value = '';
             if (filterYear) filterYear.value = '';
             if (filterWw) filterWw.value = '';
+            if (filterSortOrder) filterSortOrder.value = 'desc';
 
             kpiAgileStatus = '';
             document.querySelectorAll('.kpi-card').forEach(c => c.classList.remove('active'));
@@ -886,6 +904,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (filterQaCompleted && filterQaCompleted.value !== '') params.set('qa_completed', filterQaCompleted.value);
             if (filterYear && filterYear.value) params.set('year', filterYear.value);
             if (filterWw && filterWw.value) params.set('ww', filterWw.value);
+            if (filterSortOrder) params.set('sort_order', filterSortOrder.value);
 
             window.location.href = 'export.php?' + params.toString();
         });

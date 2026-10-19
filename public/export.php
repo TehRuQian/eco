@@ -89,6 +89,8 @@ $whereClause = !empty($where) ? "WHERE " . implode(" AND ", $where) : "";
 // Ensure schema is up to date
 ECOProcessor::ensureSchema($pdo);
 
+$sortOrder = ($_GET['sort_order'] ?? 'desc') === 'asc' ? 'ASC' : 'DESC';
+
 $sql = "
     SELECT
         em.eco_no,
@@ -124,7 +126,7 @@ $sql = "
     LEFT JOIN eco_signoff es ON em.eco_no = es.eco_no AND es.in_latest_signoff = 1
     LEFT JOIN eco_tracking et ON em.eco_no = et.eco_no
     {$whereClause}
-    ORDER BY em.year DESC, em.ww DESC, em.eco_no DESC
+    ORDER BY em.eco_no {$sortOrder}
 ";
 
 $stmt = $pdo->prepare($sql);
