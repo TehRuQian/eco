@@ -30,9 +30,8 @@ if (!$pdo) {
 
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 $processor = new ECOProcessor($pdo);
-ECOProcessor::ensureSchema($pdo);
-
 try {
+    ECOProcessor::ensureSchema($pdo);
     switch ($action) {
         case 'get_archived_ecos':
             $rows = $pdo->query('SELECT eco_no, subject, archived_at, archived_by, archive_reason
@@ -343,7 +342,7 @@ try {
 
             if (!$data) {
                 // Check if signoff-only record
-                $stmtSign = $pdo->prepare("SELECT * FROM eco_signoff WHERE eco_no = ? LIMIT 1");
+                $stmtSign = $pdo->prepare("SELECT es.* FROM eco_signoff es LEFT JOIN eco_master em ON em.eco_no = es.eco_no WHERE es.eco_no = ? AND em.archived_at IS NULL LIMIT 1");
                 $stmtSign->execute([$ecoNo]);
                 $signOnly = $stmtSign->fetch();
                 if ($signOnly) {
@@ -425,10 +424,10 @@ try {
         case 'dismiss_status_change':
             $ecoNo = ECOProcessor::normalizeEcoNo($_POST['eco_no'] ?? $_GET['eco_no'] ?? '');
             if ($ecoNo === '' || $ecoNo === 'ALL') {
-                $pdo->exec("UPDATE eco_signoff SET status_changed = 0");
+                $pdo->exec("UPDATE eco_signoff es JOIN eco_master em ON em.eco_no = es.eco_no SET es.status_changed = 0 WHERE em.archived_at IS NULL");
                 jsonResponse(['success' => true, 'message' => 'All status change highlights dismissed.']);
             } else {
-                $stmt = $pdo->prepare("UPDATE eco_signoff SET status_changed = 0 WHERE eco_no = ?");
+                $stmt = $pdo->prepare("UPDATE eco_signoff es JOIN eco_master em ON em.eco_no = es.eco_no SET es.status_changed = 0 WHERE es.eco_no = ? AND em.archived_at IS NULL");
                 $stmt->execute([$ecoNo]);
                 jsonResponse(['success' => true, 'eco_no' => $ecoNo, 'message' => 'Status change highlight dismissed.']);
             }

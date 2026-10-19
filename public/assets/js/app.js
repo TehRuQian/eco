@@ -4,6 +4,83 @@
  */
 
 document.addEventListener('DOMContentLoaded', function () {
+    const archivedDialog = document.getElementById('archivedEcosDialog');
+    const archiveDialog = document.getElementById('archiveActionDialog');
+    const archiveForm = document.getElementById('archiveActionForm');
+    document.querySelectorAll('[data-close-archive-dialog]').forEach(button => {
+        button.addEventListener('click', () => button.closest('dialog').close());
+    });
+    const openArchiveAction = (ecoNo, restoring = false) => {
+        archiveForm.reset();
+        archiveForm.elements.eco_no.value = ecoNo;
+        archiveForm.elements.action.value = restoring ? 'restore_eco' : 'archive_eco';
+        const verb = restoring ? 'Restore' : 'Archive';
+        document.getElementById('archiveActionTitle').textContent = `${verb} ${ecoNo}`;
+        document.getElementById('archiveActionSubmit').textContent = `${verb} ECO`;
+        document.getElementById('archiveActionDescription').textContent = restoring
+            ? 'Return this ECO to the dashboard with its saved tracking and signoff history.'
+            : 'Hide this ECO from the dashboard and exports. Re-importing will keep it archived. You can restore it later.';
+        document.getElementById('archiveActionError').textContent = '';
+        archiveDialog.showModal();
+    };
+    document.querySelectorAll('.archive-eco-button').forEach(button => {
+        button.addEventListener('click', () => openArchiveAction(button.dataset.eco));
+    });
+    document.getElementById('openArchivedEcos')?.addEventListener('click', async () => {
+        archivedDialog.showModal();
+        const message = document.getElementById('archivedEcosMessage');
+        const rows = document.getElementById('archivedEcosRows');
+        rows.replaceChildren();
+        message.textContent = 'Loading…';
+        try {
+            const response = await fetch('api.php?action=get_archived_ecos');
+            const data = await response.json();
+            if (!response.ok || !data.success) throw new Error(data.message || 'Unable to load archived ECOs.');
+            message.textContent = data.records.length ? `${data.records.length} archived ECO(s).` : 'No archived ECOs.';
+            for (const record of data.records) {
+                const row = document.createElement('tr');
+                for (const key of ['eco_no', 'subject', 'archived_at', 'archived_by', 'archive_reason']) {
+                    const cell = document.createElement('td');
+                    cell.textContent = record[key] || '—';
+                    row.append(cell);
+                }
+                const cell = document.createElement('td');
+                const restore = document.createElement('button');
+                restore.type = 'button';
+                restore.className = 'btn btn-outline btn-sm';
+                restore.textContent = 'Restore';
+                restore.addEventListener('click', () => openArchiveAction(record.eco_no, true));
+                cell.append(restore);
+                row.append(cell);
+                rows.append(row);
+            }
+        } catch (error) {
+            message.textContent = error.message;
+        }
+    });
+    archiveForm?.addEventListener('submit', async event => {
+        event.preventDefault();
+        const submit = document.getElementById('archiveActionSubmit');
+        const cancel = archiveDialog.querySelector('[data-close-archive-dialog]');
+        submit.disabled = true;
+        cancel.disabled = true;
+        document.getElementById('archiveActionError').textContent = '';
+        try {
+            const response = await fetch('api.php', {method: 'POST', body: new FormData(archiveForm)});
+            const data = await response.json();
+            if (!response.ok || !data.success) throw new Error(data.message || 'Archive action failed.');
+            window.location.reload();
+        } catch (error) {
+            document.getElementById('archiveActionError').textContent = error.message;
+        } finally {
+            submit.disabled = false;
+            cancel.disabled = false;
+        }
+    });
+    archiveDialog?.addEventListener('cancel', event => {
+        if (document.getElementById('archiveActionSubmit').disabled) event.preventDefault();
+    });
+
     const reviewModal = document.getElementById('missingSignoffModal');
     const reviewRows = document.getElementById('missingSignoffRows');
     const reviewMessage = document.getElementById('missingSignoffMessage');

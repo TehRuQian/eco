@@ -126,3 +126,13 @@ php database/migrate_contacts.php
 ```
 
 This adds missing columns and backfills existing `NAME (email)` contacts. It leaves populated contact groups and original site values untouched. Multiple contacts use semicolon-separated names and emails in matching order; a missing name/email uses an empty position, or NULL when that entire field is absent. Name-only values are preserved. The migration preserves `updated_at` and the status ENUM. No SQL dump needs to be re-imported.
+
+## Archive and restore ECOs
+
+Use **Archive** in a record's Action column. Enter your name and a reason, then submit. Archived records are excluded from the dashboard, summary counts, missing-signoff review, and CSV exports. Tracking and signoff records are retained. Uploading the same ECO again updates its imported data but keeps it archived.
+
+Use **Archived ECOs** beside Reset Filters to see archived records, their archive date, name, and reason. **Restore** requires a name and reason and returns the ECO to the dashboard with its saved tracking. Archive and restore events are retained in `eco_archive_history`. Names are entered by the operator; this application does not authenticate identities or provide administrator roles. No permanent delete action is included.
+
+For an existing database, import `database/migrate_archive.sql` in phpMyAdmin (select `eco_db`, or change the script's USE statement to your DB_NAME). The application can also add these fields automatically when its database account has schema permissions. Deploy the updated `src/ECOProcessor.php`, `public/index.php`, `public/api.php`, `public/export.php`, `public/assets/js/app.js`, and `public/assets/css/style.css` together, then refresh the page. Archive/restore requests use POST and a session CSRF token; the record update and audit entry are committed in one transaction.
+
+After deployment, archive a sample ECO and confirm it leaves the table, counts, review list, and export; restore it through Archived ECOs and confirm tracking remains. Re-import an archived ECO and confirm it stays archived. The import regression suite also covers retention of archive metadata for CSV, XLSX, and XLS imports.

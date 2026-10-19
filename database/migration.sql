@@ -63,3 +63,5 @@ ALTER TABLE eco_signoff ADD COLUMN IF NOT EXISTS in_latest_signoff TINYINT(1) NO
 
 -- Separate PMC/QA names and emails and backfill existing data:
 -- Run from the project root: php database/migrate_contacts.php
+
+-- Archive/restore support: import database/migrate_archive.sql.

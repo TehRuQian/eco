@@ -134,9 +134,6 @@ class ECOProcessor
                         `is_unmatched` TINYINT(1) NOT NULL DEFAULT 0,
                         `in_latest_signoff` TINYINT(1) NOT NULL DEFAULT 1,
                         `created_at` DATETIME NULL,
-                        `archived_at` DATETIME NULL,
-                        `archived_by` VARCHAR(100) NULL,
-                        `archive_reason` TEXT NULL,
                         `updated_at` DATETIME NULL
                     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
                 ");

@@ -172,6 +172,14 @@ try {
         check($result['stats']['master_updated'], 1, "$extension existing ECO updated");
         check($db->master['ECO001'], $record, "$extension re-import updates all master fields");
         check($db->tracking, $tracking, "$extension manual tracking preserved");
+        $archiveMetadata = ['archived_at' => '2026-10-19 10:00:00', 'archived_by' => 'Test operator', 'archive_reason' => 'Incorrect import'];
+        $db->master['ECO001'] = array_merge($db->master['ECO001'], $archiveMetadata);
+        $result = $processor->processImport($file, 'SearchResult.' . $extension);
+        check($result['success'], true, "$extension archived ECO can be re-imported");
+        foreach ($archiveMetadata as $field => $expected) {
+            check($db->master['ECO001'][$field], $expected, "$extension re-import preserves $field");
+        }
+        check($db->tracking, $tracking, "$extension archived ECO tracking preserved");
     }
 
     $file = tempnam(sys_get_temp_dir(), 'eco_blank_');

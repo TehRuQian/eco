@@ -8,6 +8,10 @@ error_reporting(E_ALL);
 ini_set('display_errors', '0');
 ini_set('log_errors', '1');
 
+session_start();
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../src/ECOProcessor.php';
 
@@ -149,6 +153,7 @@ if ($pdo) {
             FROM `eco_master` em
             {$signoffJoin}
             {$trackingJoin}
+            WHERE em.archived_at IS NULL
             {$orderBy}
         ";
 
@@ -197,7 +202,7 @@ if ($pdo) {
 
         // Also check signoff-only records count if table exists
         if ($hasSignoffTbl && in_array('is_unmatched', $signoffCols, true)) {
-            $stmtSignOnly = $pdo->query("SELECT COUNT(*) FROM `eco_signoff` WHERE is_unmatched = 1");
+            $stmtSignOnly = $pdo->query("SELECT COUNT(*) FROM `eco_signoff` es JOIN eco_master em ON em.eco_no = es.eco_no WHERE es.is_unmatched = 1 AND em.archived_at IS NULL");
             $unmatchedSignoff = (int)$stmtSignOnly->fetchColumn();
         }
 
@@ -327,6 +332,7 @@ if ($pdo) {
             </div>
 
             <div class="filter-meta">
+                <button type="button" id="openArchivedEcos" class="btn btn-outline btn-sm">Archived ECOs</button>
                 <button type="button" id="resetFiltersBtn" class="btn btn-outline btn-sm">Reset Filters</button>
                 <span id="tableRowCount" style="font-weight:600; color:#475569;">Showing <?= count($records) ?> of <?= count($records) ?> ECOs</span>
             </div>
@@ -562,6 +568,7 @@ if ($pdo) {
                                 <button type="button" class="btn btn-outline btn-sm open-edit-modal" data-eco="<?= $ecoNo ?>" title="Edit tracking details">
                                     Edit
                                 </button>
+                                <button type="button" class="btn btn-outline btn-sm archive-eco-button" data-eco="<?= h($ecoNo) ?>">Archive</button>
                             </td>
                         </tr>
 
@@ -721,6 +728,25 @@ if ($pdo) {
         </div>
     </div>
 </div>
+<dialog id="archivedEcosDialog" class="archive-dialog">
+    <div class="archive-dialog-heading"><h2>Archived ECOs</h2><button type="button" data-close-archive-dialog class="btn btn-outline btn-sm">Close</button></div>
+    <p>Archived ECOs are excluded from the dashboard and normal exports. Their tracking and signoff history is retained.</p>
+    <p id="archivedEcosMessage" role="status"></p>
+    <div class="archive-list-scroll"><table class="eco-table"><thead><tr><th>ECO</th><th>Subject</th><th>Archived at</th><th>By</th><th>Reason</th><th>Action</th></tr></thead><tbody id="archivedEcosRows"></tbody></table></div>
+</dialog>
+<dialog id="archiveActionDialog" class="archive-dialog archive-action-dialog">
+    <form id="archiveActionForm">
+        <div class="archive-dialog-heading"><h2 id="archiveActionTitle">Archive ECO</h2><button type="button" data-close-archive-dialog class="btn btn-outline btn-sm">Cancel</button></div>
+        <p id="archiveActionDescription"></p>
+        <input type="hidden" name="csrf_token" value="<?= h($_SESSION['csrf_token']) ?>">
+        <input type="hidden" name="eco_no">
+        <input type="hidden" name="action" value="archive_eco">
+        <label>Your name <input name="actor" required maxlength="100" autocomplete="name"></label>
+        <label>Reason <textarea name="reason" required maxlength="2000" rows="3"></textarea></label>
+        <p id="archiveActionError" role="alert"></p>
+        <button type="submit" id="archiveActionSubmit" class="btn btn-primary">Archive ECO</button>
+    </form>
+</dialog>
 <script src="assets/js/app.js?v=<?= (int)filemtime(__DIR__ . '/assets/js/app.js') ?>"></script>
 </body>
 </html>
