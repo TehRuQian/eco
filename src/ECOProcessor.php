@@ -71,8 +71,6 @@ class ECOProcessor
                         `warehouse_action` VARCHAR(100) NULL,
                         `cut_in_first_mo` VARCHAR(100) NULL,
                         `cut_in_date` DATETIME NULL,
-                        `pmc_site` VARCHAR(150) NULL,
-                        `qa_site` VARCHAR(150) NULL,
                         `pmc_name` TEXT NULL,
                         `pmc_email` TEXT NULL,
                         `qa_name` TEXT NULL,
@@ -99,8 +97,6 @@ class ECOProcessor
                 'warehouse_action' => "VARCHAR(100) NULL",
                 'cut_in_first_mo' => "VARCHAR(100) NULL",
                 'cut_in_date'     => "DATETIME NULL",
-                'pmc_site'        => "VARCHAR(150) NULL",
-                'qa_site'         => "VARCHAR(150) NULL",
                 'originated_date' => "DATETIME NULL",
                 'completed_date'  => "DATETIME NULL",
                 'created_at'      => "DATETIME NULL",
@@ -246,6 +242,24 @@ class ECOProcessor
         // Normalize Unicode spaces
         $value = preg_replace('/\s+/u', ' ', $value);
         return trim($value);
+    }
+
+    /** Build the existing site labels from the separate database fields. */
+    public static function withSiteLabels(array $row): array
+    {
+        foreach (['pmc', 'qa'] as $role) {
+            $names = explode(';', (string)($row[$role . '_name'] ?? ''));
+            $emails = explode(';', (string)($row[$role . '_email'] ?? ''));
+            $contacts = [];
+            for ($i = 0; $i < max(count($names), count($emails)); $i++) {
+                $name = trim($names[$i] ?? '');
+                $email = trim($emails[$i] ?? '');
+                if ($name === '' && $email === '') continue;
+                $contacts[] = $name !== '' && $email !== '' ? $name . ' (' . $email . ')' : ($name ?: $email);
+            }
+            $row[$role . '_site'] = implode(';', $contacts);
+        }
+        return $row;
     }
 
     /** Split semicolon-separated NAME (email) contacts, preserving order. */

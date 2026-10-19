@@ -103,7 +103,7 @@ try {
          * 3. TOGGLE PMC / QA STATUS (AJAX Toggle)
          * ------------------------------------------------------------- */
         case 'get_missing_signoff':
-            $rows = $pdo->query("SELECT em.eco_no, em.status, em.pmc_site, em.qa_site,
+            $rows = $pdo->query("SELECT em.eco_no, em.status, em.pmc_name, em.pmc_email, em.qa_name, em.qa_email,
                     COALESCE(et.pmc_result_completed, 0) AS pmc_result_completed,
                     COALESCE(et.qa_result_completed, 0) AS qa_result_completed,
                     et.status_progress
@@ -112,6 +112,7 @@ try {
                 WHERE NOT EXISTS (SELECT 1 FROM eco_signoff es
                     WHERE es.eco_no = em.eco_no AND es.in_latest_signoff = 1)
                 ORDER BY em.eco_no")->fetchAll(PDO::FETCH_ASSOC);
+            $rows = array_map([ECOProcessor::class, 'withSiteLabels'], $rows);
             $rows = array_values(array_filter($rows, static function ($row) {
                 return ECOProcessor::statusToAgileStatus($row['status']) === 'Open';
             }));
@@ -294,7 +295,7 @@ try {
                 jsonResponse(['success' => false, 'message' => 'ECO not found.'], 404);
             }
 
-            jsonResponse(['success' => true, 'eco' => $data]);
+            jsonResponse(['success' => true, 'eco' => ECOProcessor::withSiteLabels($data)]);
             break;
 
         /* -------------------------------------------------------------

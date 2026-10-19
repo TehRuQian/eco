@@ -35,6 +35,23 @@ SET SESSION group_concat_max_len = 65535;
 DROP TEMPORARY TABLE IF EXISTS eco_contact_parts;
 START TRANSACTION;
 
+-- If old site columns were already deleted, leave existing split contacts intact.
+SELECT IF(COUNT(*) > 0, '`pmc_site`', 'NULL') INTO @eco_pmc_source
+FROM information_schema.columns WHERE table_schema = DATABASE()
+AND table_name = 'eco_master' AND column_name = 'pmc_site';
+SELECT IF(COUNT(*) > 0, '`qa_site`', 'NULL') INTO @eco_qa_source
+FROM information_schema.columns WHERE table_schema = DATABASE()
+AND table_name = 'eco_master' AND column_name = 'qa_site';
+DROP TEMPORARY TABLE IF EXISTS eco_contact_sources;
+SET @eco_source_sql = CONCAT(
+    'CREATE TEMPORARY TABLE eco_contact_sources AS SELECT eco_no, ''pmc'' AS role, ',
+    @eco_pmc_source, ' AS site FROM eco_master WHERE pmc_name IS NULL AND pmc_email IS NULL ',
+    'UNION ALL SELECT eco_no, ''qa'', ', @eco_qa_source,
+    ' FROM eco_master WHERE qa_name IS NULL AND qa_email IS NULL');
+PREPARE eco_contact_statement FROM @eco_source_sql;
+EXECUTE eco_contact_statement;
+DEALLOCATE PREPARE eco_contact_statement;
+
 -- JSON_QUOTE safely handles quotes/backslashes before splitting on semicolons.
 CREATE TEMPORARY TABLE eco_contact_parts AS
 SELECT eco_no, role,
@@ -54,11 +71,7 @@ FROM (
         SELECT source.eco_no, source.role, parts.contact_position,
                TRIM(REGEXP_REPLACE(parts.contact, '[[:space:]]+', ' ')) AS contact
         FROM (
-            SELECT eco_no, 'pmc' AS role, pmc_site AS site FROM eco_master
-            WHERE pmc_name IS NULL AND pmc_email IS NULL
-            UNION ALL
-            SELECT eco_no, 'qa', qa_site FROM eco_master
-            WHERE qa_name IS NULL AND qa_email IS NULL
+            SELECT eco_no, role, site FROM eco_contact_sources
         ) AS source
         JOIN JSON_TABLE(
             CONCAT('[', REPLACE(JSON_QUOTE(COALESCE(source.site, '')), ';', '","'), ']'),
@@ -86,6 +99,7 @@ WHERE master.qa_name IS NULL AND master.qa_email IS NULL;
 
 COMMIT;
 DROP TEMPORARY TABLE eco_contact_parts;
+DROP TEMPORARY TABLE eco_contact_sources;
 SET SESSION group_concat_max_len = @eco_previous_group_concat;
 
 -- Review the separated values.

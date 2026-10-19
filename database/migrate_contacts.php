@@ -18,10 +18,12 @@ try {
             $pdo->exec("ALTER TABLE eco_master ADD COLUMN `{$column}` TEXT NULL");
         }
     }
+    $pmcSource = in_array('pmc_site', $columns, true) ? 'pmc_site' : 'NULL AS pmc_site';
+    $qaSource = in_array('qa_site', $columns, true) ? 'qa_site' : 'NULL AS qa_site';
     $pdo->beginTransaction();
-    $rows = $pdo->query('SELECT eco_no, pmc_site, qa_site, pmc_name, pmc_email, qa_name, qa_email
+    $rows = $pdo->query("SELECT eco_no, {$pmcSource}, {$qaSource}, pmc_name, pmc_email, qa_name, qa_email
         FROM eco_master WHERE (pmc_name IS NULL AND pmc_email IS NULL)
-        OR (qa_name IS NULL AND qa_email IS NULL) FOR UPDATE')->fetchAll(PDO::FETCH_ASSOC);
+        OR (qa_name IS NULL AND qa_email IS NULL) FOR UPDATE")->fetchAll(PDO::FETCH_ASSOC);
     $count = 0;
     foreach ($rows as $row) {
         foreach (['pmc', 'qa'] as $role) {

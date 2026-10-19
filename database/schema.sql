@@ -27,8 +27,6 @@ CREATE TABLE IF NOT EXISTS `eco_master` (
     `warehouse_action`           VARCHAR(100) NULL,
     `cut_in_first_mo`            VARCHAR(100) NULL,
     `cut_in_date`                DATETIME NULL,
-    `pmc_site`                   VARCHAR(150) NULL COMMENT 'Direct from SearchResult PMC_Site',
-    `qa_site`                    VARCHAR(150) NULL COMMENT 'Direct from SearchResult QA_Site',
     `pmc_name`                   TEXT NULL,
     `pmc_email`                  TEXT NULL,
     `qa_name`                    TEXT NULL,

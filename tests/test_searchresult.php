@@ -97,6 +97,13 @@ check(ECOProcessor::splitSiteContacts('Alice;Bob (bob@example.com)'),
 check(ECOProcessor::splitSiteContacts('alice@example.com'),
     ['name' => null, 'email' => 'alice@example.com'], 'Email-only contact');
 check(ECOProcessor::splitSiteContacts('PMC'), ['name' => 'PMC', 'email' => null], 'Name-only contact');
+$labels = ECOProcessor::withSiteLabels([
+    'pmc_name' => 'Alice;Bob', 'pmc_email' => ';bob@example.com',
+    'qa_name' => null, 'qa_email' => 'qa@example.com',
+]);
+check($labels['pmc_site'], 'Alice;Bob (bob@example.com)', 'Display preserves multiple contact positions');
+check($labels['qa_site'], 'qa@example.com', 'Display supports email-only contacts');
+check(ECOProcessor::withSiteLabels([])['pmc_site'], '', 'Display supports missing contacts');
 $headers = [
     'Final Complete Date', 'unrelated cut in date notes', 'Change Number',
     " c - How to deal with the warehouse\xC2\xA0 demand ( Page Three ) ",
@@ -142,10 +149,12 @@ try {
         check($result['stats']['master_inserted'], 1, "$extension new ECO");
         check(isset($db->master['ECO_SKIPPED']), false, "$extension blank cleaned status row skipped");
         $record = $db->master['ECO001'];
+        check(array_key_exists('pmc_site', $record), false, "$extension stores PMC without legacy column");
+        check(array_key_exists('qa_site', $record), false, "$extension stores QA without legacy column");
         foreach (['pmc_name' => 'Charlie', 'pmc_email' => 'charlie@example.com',
             'qa_name' => 'Alice;Bob', 'qa_email' => 'alice@example.com;bob@example.com',
             'pmc_site' => $values[11], 'qa_site' => $values[7]] as $field => $expected) {
-            check($record[$field], $expected, "$extension contact field $field");
+            check(ECOProcessor::withSiteLabels($record)[$field], $expected, "$extension contact field $field");
         }
         foreach (['wip_action' => $values[10], 'fg_action' => $values[6], 'warehouse_action' => 'No Impact',
             'cut_in_first_mo' => 'MO123456', 'cut_in_date' => '2026-10-14 00:00:00',

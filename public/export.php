@@ -50,18 +50,6 @@ if (!empty($_GET['tracker_status'])) {
     $params[] = trim($_GET['tracker_status']);
 }
 
-// PMC Site filter
-if (!empty($_GET['pmc_site'])) {
-    $where[] = "em.pmc_site = ?";
-    $params[] = trim($_GET['pmc_site']);
-}
-
-// QA Site filter
-if (!empty($_GET['qa_site'])) {
-    $where[] = "em.qa_site = ?";
-    $params[] = trim($_GET['qa_site']);
-}
-
 // PMC Completed filter
 if (isset($_GET['pmc_completed']) && $_GET['pmc_completed'] !== '') {
     $where[] = "et.pmc_result_completed = ?";
@@ -112,9 +100,9 @@ $sql = "
         em.subject,
         em.status_in_agile,
         et.status_progress,
-        em.pmc_site,
+        em.pmc_name, em.pmc_email,
         et.pmc_result_completed,
-        em.qa_site,
+        em.qa_name, em.qa_email,
         et.qa_result_completed,
         es.internal_status AS signoff_status,
         em.originated_date,
@@ -188,6 +176,10 @@ fputcsv($output, [
 ]);
 
 while ($row = $stmt->fetch()) {
+    $row = ECOProcessor::withSiteLabels($row);
+    foreach (['pmc_site', 'qa_site'] as $siteFilter) {
+        if (!empty($_GET[$siteFilter]) && $row[$siteFilter] !== trim($_GET[$siteFilter])) continue 2;
+    }
     fputcsv($output, [
         $row['eco_no'],
         $row['ecr_no'] ?? '',

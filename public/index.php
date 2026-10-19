@@ -72,8 +72,8 @@ if ($pdo) {
         $colWhAction    = in_array('warehouse_action', $masterCols, true) ? 'em.warehouse_action' : "NULL AS warehouse_action";
         $colCutInMo     = in_array('cut_in_first_mo', $masterCols, true) ? 'em.cut_in_first_mo' : "NULL AS cut_in_first_mo";
         $colCutInDate   = in_array('cut_in_date', $masterCols, true) ? 'em.cut_in_date' : "NULL AS cut_in_date";
-        $colPmcSite     = in_array('pmc_site', $masterCols, true) ? 'em.pmc_site' : "NULL AS pmc_site";
-        $colQaSite      = in_array('qa_site', $masterCols, true) ? 'em.qa_site' : "NULL AS qa_site";
+        $colPmcSite = 'em.pmc_name, em.pmc_email';
+        $colQaSite = 'em.qa_name, em.qa_email';
         $colOrigDate    = in_array('originated_date', $masterCols, true) ? 'em.originated_date' : "NULL AS originated_date";
         $colCompDate    = in_array('completed_date', $masterCols, true) ? 'em.completed_date' : "NULL AS completed_date";
         $colYear        = in_array('year', $masterCols, true) ? 'em.year' : "NULL AS year";
@@ -153,7 +153,7 @@ if ($pdo) {
         ";
 
         $stmt = $pdo->query($sql);
-        $records = $stmt->fetchAll();
+        $records = array_map([ECOProcessor::class, 'withSiteLabels'], $stmt->fetchAll());
 
         // Calculate KPI values
         $totalEco = count($records);
