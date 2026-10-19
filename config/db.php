@@ -4,12 +4,38 @@
  * Provides a shared PDO instance using utf8mb4 and prepared statement defaults.
  */
 
-// Allow override via environment variables if configured in LAMP / Apache
-$host     = getenv('DB_HOST') ?: 'localhost';
-$dbname   = getenv('DB_NAME') ?: 'eco_db';
-$username = getenv('DB_USER') ?: 'myuser';
-$password = getenv('DB_PASS') !== false ? getenv('DB_PASS') : 'StrongPassword123!';
-$port     = getenv('DB_PORT') ?: 3306;
+// Read local settings without exporting secrets to the process environment.
+// Explicit LAMP / Apache environment variables take precedence, including empty passwords.
+$localSettings = [];
+$envFile = dirname(__DIR__) . '/.env';
+if (is_readable($envFile)) {
+    foreach (file($envFile, FILE_IGNORE_NEW_LINES) as $line) {
+        $line = trim($line);
+        if ($line === '' || $line[0] === '#' || strpos($line, '=') === false) {
+            continue;
+        }
+        [$key, $value] = explode('=', $line, 2);
+        $key = trim(trim($key), "\"'");
+        if (!in_array($key, ['DB_HOST', 'DB_NAME', 'DB_USER', 'DB_PASS', 'DB_PORT'], true)) {
+            continue;
+        }
+        $value = trim($value);
+        if (strlen($value) >= 2 && ($value[0] === '"' || $value[0] === "'") && substr($value, -1) === $value[0]) {
+            $value = substr($value, 1, -1);
+        }
+        $localSettings[$key] = $value;
+    }
+}
+$dbSetting = static function (string $key, string $default) use ($localSettings): string {
+    $value = getenv($key);
+    return $value !== false ? $value : ($localSettings[$key] ?? $default);
+};
+$host     = $dbSetting('DB_HOST', 'localhost');
+$dbname   = $dbSetting('DB_NAME', 'eco_db');
+$username = $dbSetting('DB_USER', 'myuser');
+$password = $dbSetting('DB_PASS', '');
+$port     = $dbSetting('DB_PORT', '3306');
+unset($localSettings, $dbSetting, $value, $line);
 
 $dsn = "mysql:host={$host};port={$port};dbname={$dbname};charset=utf8mb4";
 $options = [

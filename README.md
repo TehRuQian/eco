@@ -69,7 +69,7 @@ Run commands from the project root.
 
 2. For a new database, import `database/schema.sql`. It creates and selects `eco_db`. To upgrade an existing database, review `database/migration.sql` and apply the statements supported by your database server. Both scripts explicitly select `eco_db`; adjust them if you use a different database name.
 
-3. Set the database environment variables in your PHP server environment:
+3. Copy `.env.example` to `.env` in the project root and set your database credentials, or set the database environment variables in your PHP server environment:
 
    | Variable | Purpose |
    |---|---|
@@ -79,7 +79,9 @@ Run commands from the project root.
    | `DB_USER` | Database username |
    | `DB_PASS` | Database password |
 
-   Connection defaults are defined in `config/db.php`. Environment variables override those defaults. There is no automatic `.env` file loader.
+   `config/db.php` loads the root `.env` automatically. Server environment variables override `.env`, including an explicitly empty password. Use one `KEY=value` setting per line; matching single or double quotes around values are supported. Put comments on separate lines. `.env` is excluded from Git.
+
+   `database/schema.sql` creates the database and tables, but does not create MySQL users. For error 1045 (access denied), verify `DB_USER` and `DB_PASS` and ask your MySQL administrator to create or update the account for the connecting host and grant it access to your configured database. Importing the schema alone does not fix authentication.
 
 4. Set the web server document root to this project's `public/` directory. Keep `config/`, `database/`, `src/`, `tests/`, `prototypes/`, and `vendor/` outside the document root. The application entry point is `public/index.php`.
 

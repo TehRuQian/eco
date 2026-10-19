@@ -278,7 +278,7 @@ if ($pdo) {
         <div style="background:#fee2e2; border:1px solid #f87171; border-radius:10px; padding:18px 24px; margin-bottom:24px; color:#991b1b;">
             <h3 style="margin-bottom:6px; font-size:16px;">Database Connection Notice</h3>
             <p style="font-size:13.5px;">Unable to connect to MySQL database: <strong><?= h($db_connection_error ?? 'Check credentials in config/db.php') ?></strong></p>
-            <p style="font-size:12.5px; margin-top:6px; color:#7f1d1d;">When running on your LAMP server, ensure the database name <code>eco_db</code> and credentials are created using <code>database/schema.sql</code>.</p>
+            <p style="font-size:12.5px; margin-top:6px; color:#7f1d1d;">Check the database credentials in the project root <code>.env</code> or server environment. Import <code>database/schema.sql</code> to create the tables; a MySQL administrator must separately create the database user and grant access to the configured database.</p>
         </div>
     <?php endif; ?>
 
