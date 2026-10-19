@@ -762,3 +762,27 @@ table.eco-table td.signoff-cell { vertical-align: bottom; padding-top: 14px; pad
 
 
 .signoff-review-table .signoff-cell .site-badge { min-height: 39px; line-height: 19.5px; margin-bottom: 6px; }
+/* Search within dashboard filter dropdowns. */
+.searchable-filter { position: relative; min-width: 130px; }
+.searchable-filter-trigger { width: 100%; text-align: left; padding-right: 30px; }
+.searchable-filter-trigger::after { content: '▾'; position: absolute; right: 11px; }
+.searchable-filter-panel {
+    position: absolute; top: calc(100% + 5px); left: 0; z-index: 50;
+    width: max(100%, 240px); max-width: calc(100vw - 48px);
+    padding: 8px; background: #fff; border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm); box-shadow: 0 8px 24px rgba(15, 23, 42, .14);
+}
+.searchable-filter-panel[hidden] { display: none; }
+.searchable-filter-panel input {
+    box-sizing: border-box; width: 100%; padding: 8px 10px; font: inherit;
+    border: 1px solid var(--border-color); border-radius: var(--radius-sm);
+}
+.searchable-filter-options { max-height: 240px; overflow-y: auto; margin-top: 6px; }
+.searchable-filter-option {
+    display: block; width: 100%; padding: 8px 10px; border: 0; background: #fff;
+    color: var(--text-secondary); text-align: left; font: inherit; cursor: pointer;
+    white-space: normal; overflow-wrap: anywhere; border-radius: 4px;
+}
+.searchable-filter-option:hover, .searchable-filter-option:focus-visible,
+.searchable-filter-option[aria-pressed="true"] { background: #eaf4ff; color: #1747a6; }
+.searchable-filter-empty { padding: 8px 10px; margin: 0; color: #64748b; }

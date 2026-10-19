@@ -531,8 +531,111 @@ document.addEventListener('DOMContentLoaded', function () {
     const resetFiltersBtn = document.getElementById('resetFiltersBtn');
     const rowCountEl = document.getElementById('tableRowCount');
     let kpiAgileStatus = '';
+    // Keep the original selects as the source of filter values.
+    const searchableFilters = [];
+    document.querySelectorAll('.filter-row-controls select.filter-select').forEach(select => {
+        const label = select.options[0]?.textContent || 'Filter';
+        const wrapper = document.createElement('div');
+        wrapper.className = 'searchable-filter';
+        const trigger = document.createElement('button');
+        trigger.type = 'button';
+        trigger.className = 'filter-select searchable-filter-trigger';
+        trigger.setAttribute('aria-expanded', 'false');
+        const panel = document.createElement('div');
+        panel.className = 'searchable-filter-panel';
+        panel.id = select.id + 'SearchPanel';
+        panel.hidden = true;
+        trigger.setAttribute('aria-controls', panel.id);
+        const search = document.createElement('input');
+        search.type = 'search';
+        search.placeholder = 'Search options…';
+        search.setAttribute('aria-label', 'Search ' + label);
+        search.autocomplete = 'off';
+        const options = document.createElement('div');
+        options.className = 'searchable-filter-options';
+        options.setAttribute('role', 'group');
+        options.setAttribute('aria-label', label);
+        const close = () => {
+            panel.hidden = true;
+            trigger.setAttribute('aria-expanded', 'false');
+        };
+        const render = () => {
+            options.replaceChildren();
+            const query = search.value.trim().toLocaleLowerCase();
+            Array.from(select.options).forEach(option => {
+                if (option.disabled || !option.textContent.toLocaleLowerCase().includes(query)) return;
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'searchable-filter-option';
+                button.textContent = option.textContent;
+                button.setAttribute('aria-pressed', String(option.selected));
+                button.addEventListener('click', () => {
+                    select.value = option.value;
+                    select.dispatchEvent(new Event('change', {bubbles: true}));
+                    close();
+                    trigger.focus();
+                });
+                options.append(button);
+            });
+            if (!options.children.length) {
+                const empty = document.createElement('p');
+                empty.className = 'searchable-filter-empty';
+                empty.textContent = 'No matching options';
+                empty.setAttribute('role', 'status');
+                options.append(empty);
+            }
+        };
+        const sync = () => {
+            trigger.textContent = select.selectedOptions[0]?.textContent || label;
+            trigger.setAttribute('aria-label', label + ': ' + trigger.textContent);
+            search.value = '';
+            close();
+        };
+        trigger.addEventListener('click', () => {
+            const opening = panel.hidden;
+            searchableFilters.forEach(filter => filter.close());
+            if (opening) {
+                search.value = '';
+                render();
+                panel.hidden = false;
+                trigger.setAttribute('aria-expanded', 'true');
+                search.focus();
+            }
+        });
+        search.addEventListener('input', render);
+        wrapper.addEventListener('keydown', event => {
+            if (event.key === 'Escape') {
+                close();
+                trigger.focus();
+                event.preventDefault();
+            } else if (!panel.hidden && ['ArrowDown', 'ArrowUp'].includes(event.key)) {
+                const buttons = Array.from(options.querySelectorAll('button'));
+                const current = buttons.indexOf(document.activeElement);
+                const next = current < 0 ? (event.key === 'ArrowDown' ? 0 : buttons.length - 1)
+                    : (current + (event.key === 'ArrowDown' ? 1 : -1) + buttons.length) % buttons.length;
+                buttons[next]?.focus();
+                event.preventDefault();
+            } else if (event.key === 'Enter' && event.target === search) {
+                options.querySelector('button')?.click();
+                event.preventDefault();
+            }
+        });
+        wrapper.addEventListener('focusout', event => {
+            if (!wrapper.contains(event.relatedTarget)) close();
+        });
+        document.addEventListener('click', event => {
+            if (!wrapper.contains(event.target)) close();
+        });
+        select.before(wrapper);
+        wrapper.append(select, trigger, panel);
+        panel.append(search, options);
+        select.hidden = true;
+        searchableFilters.push({sync, close});
+        sync();
+    });
 
     function applyFilters() {
+        searchableFilters.forEach(filter => filter.sync());
         const query = (searchBox ? searchBox.value : '').toLowerCase().trim();
         const cust = filterCustomer ? filterCustomer.value : '';
         const proj = filterProject ? filterProject.value : '';
