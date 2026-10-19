@@ -267,6 +267,22 @@ class ECOProcessor
         return self::cleanText($cleaned);
     }
 
+    /** Normalize imported master statuses to the configured reviewer ENUM values. */
+    public static function normalizeImportStatus(?string $rawStatus, string $context = ''): string
+    {
+        $status = self::cleanStatus($rawStatus);
+        $status = preg_replace('/^reviewer\s*([12])$/i', 'Reviewer $1', $status);
+        foreach (['Controller', 'Reviewer 1', 'Reviewer 2', 'Complete'] as $allowed) {
+            if (strcasecmp($status, $allowed) === 0) {
+                return $allowed;
+            }
+        }
+        throw new InvalidArgumentException(
+            ($context !== '' ? $context . ': ' : '')
+            . 'Unsupported status ' . json_encode($rawStatus, JSON_UNESCAPED_UNICODE)
+            . '. Expected Controller, Reviewer 1, Reviewer 2, or Complete.'
+        );
+    }
     /**
      * Derive Agile status from the reviewer status.
      */
@@ -671,7 +687,7 @@ class ECOProcessor
 
             // Raw Status & Cleaned Status (without # No Controller)
             $rawStatus = (string)($row[$masterMap['status']] ?? '');
-            $cleanStatus = self::cleanStatus($rawStatus);
+            $cleanStatus = self::normalizeImportStatus($rawStatus, "SearchResult row " . ($i + 1) . " ({$ecoNo})");
 
             $statusInAgile = self::statusToAgileStatus($cleanStatus);
 
@@ -908,7 +924,7 @@ class ECOProcessor
                         // Unknown SearchResult fields remain NULL until a master import.
                         $newMaster = array_filter([
                             'eco_no' => $ecoNo,
-                            'status' => $s['internal_status'],
+                            'status' => self::normalizeImportStatus($s['internal_status'], "Signoff ECO {$ecoNo}"),
                             'status_in_agile' => self::statusToAgileStatus($s['internal_status']),
                         ], fn($k) => in_array($k, $masterCols, true), ARRAY_FILTER_USE_KEY);
                         $columns = '`' . implode('`, `', array_keys($newMaster)) . '`';

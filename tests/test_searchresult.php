@@ -76,6 +76,16 @@ class ImportTestStatement extends PDOStatement {
     }
 }
 
+check(ECOProcessor::normalizeImportStatus(' reviewer1 # No Controller '), 'Reviewer 1', 'Normalize reviewer status for ENUM');
+check(ECOProcessor::normalizeImportStatus('COMPLETE'), 'Complete', 'Canonical Complete status');
+foreach (['Open', 'Closed', '', '# No Controller', 'Reviewer 3'] as $invalidStatus) {
+    try {
+        ECOProcessor::normalizeImportStatus($invalidStatus, 'SearchResult row 2 (ECO001)');
+        throw new RuntimeException('Unsupported status was accepted: ' . $invalidStatus);
+    } catch (InvalidArgumentException $e) {
+        check(str_contains($e->getMessage(), 'SearchResult row 2 (ECO001)'), true, 'Invalid status identifies source record');
+    }
+}
 $headers = [
     'Final Complete Date', 'unrelated cut in date notes', 'Change Number',
     " c - How to deal with the warehouse\xC2\xA0 demand ( Page Three ) ",
@@ -83,7 +93,7 @@ $headers = [
     'QA_Site', ' * Cut in Date (Page Three) ', 'Date Originated',
     " a - How to deal with the WIP\n(Page Three). ", 'PMC_Site'
 ];
-$values = ['2026/10/15', 'must not map', ' eco001 ', 'No Impact', 'MO123456', 'Open',
+$values = ['2026/10/15', 'must not map', ' eco001 ', 'No Impact', 'MO123456', 'Controller',
     'No impact, new build, no FG.', 'QA', '2026/10/14', '2026-10-01',
     "No impact, new build, no WIP.\nKeep  spacing", 'PMC'];
 $files = [];
@@ -184,7 +194,7 @@ try {
 
     $handle = fopen($file, 'w');
     fputcsv($handle, ['Change Number', 'Status', 'PMC_Site', 'QA_Site', 'Date Originated'], ',', '"', '');
-    fputcsv($handle, ['ECO002', 'Open', 'PMC', 'QA', '2026-10-14'], ',', '"', '');
+    fputcsv($handle, ['ECO002', 'Controller', 'PMC', 'QA', '2026-10-14'], ',', '"', '');
     fclose($handle);
     $validation = (new ECOProcessor(null))->preFlightCheck($file, 'SearchResult.csv');
     check($validation['valid'], true, 'legacy headers remain supported');
