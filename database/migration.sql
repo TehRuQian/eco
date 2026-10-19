@@ -62,3 +62,6 @@ SELECT 'Migration completed successfully. Refresh the dashboard.' AS `Result`;
 
 -- Latest user_signoff snapshot membership (also added by ensureSchema).
 ALTER TABLE eco_signoff ADD COLUMN IF NOT EXISTS in_latest_signoff TINYINT(1) NOT NULL DEFAULT 1;
+
+-- Separate PMC/QA names and emails and backfill existing data:
+-- Run from the project root: php database/migrate_contacts.php

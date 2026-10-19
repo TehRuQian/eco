@@ -89,6 +89,14 @@ foreach (['Open', 'Closed', 'Reviewer 3'] as $invalidStatus) {
         check(str_contains($e->getMessage(), 'SearchResult row 2 (ECO001)'), true, 'Invalid status identifies source record');
     }
 }
+check(ECOProcessor::splitSiteContacts(null), ['name' => null, 'email' => null], 'Empty contacts');
+check(ECOProcessor::splitSiteContacts('Alice (alice@example.com); Bob (bob@example.com)'),
+    ['name' => 'Alice;Bob', 'email' => 'alice@example.com;bob@example.com'], 'Multiple contacts keep matching order');
+check(ECOProcessor::splitSiteContacts('Alice;Bob (bob@example.com)'),
+    ['name' => 'Alice;Bob', 'email' => ';bob@example.com'], 'Missing email keeps its position');
+check(ECOProcessor::splitSiteContacts('alice@example.com'),
+    ['name' => null, 'email' => 'alice@example.com'], 'Email-only contact');
+check(ECOProcessor::splitSiteContacts('PMC'), ['name' => 'PMC', 'email' => null], 'Name-only contact');
 $headers = [
     'Final Complete Date', 'unrelated cut in date notes', 'Change Number',
     " c - How to deal with the warehouse\xC2\xA0 demand ( Page Three ) ",
@@ -99,6 +107,8 @@ $headers = [
 $values = ['2026/10/15', 'must not map', ' eco001 ', 'No Impact', 'MO123456', 'Controller',
     'No impact, new build, no FG.', 'QA', '2026/10/14', '2026-10-01',
     "No impact, new build, no WIP.\nKeep  spacing", 'PMC'];
+$values[7] = 'Alice (alice@example.com);Bob (bob@example.com)';
+$values[11] = 'Charlie (charlie@example.com)';
 $files = [];
 try {
     foreach (['csv', 'xlsx', 'xls'] as $extension) {
@@ -132,6 +142,11 @@ try {
         check($result['stats']['master_inserted'], 1, "$extension new ECO");
         check(isset($db->master['ECO_SKIPPED']), false, "$extension blank cleaned status row skipped");
         $record = $db->master['ECO001'];
+        foreach (['pmc_name' => 'Charlie', 'pmc_email' => 'charlie@example.com',
+            'qa_name' => 'Alice;Bob', 'qa_email' => 'alice@example.com;bob@example.com',
+            'pmc_site' => $values[11], 'qa_site' => $values[7]] as $field => $expected) {
+            check($record[$field], $expected, "$extension contact field $field");
+        }
         foreach (['wip_action' => $values[10], 'fg_action' => $values[6], 'warehouse_action' => 'No Impact',
             'cut_in_first_mo' => 'MO123456', 'cut_in_date' => '2026-10-14 00:00:00',
             'completed_date' => '2026-10-15 00:00:00'] as $field => $expected) {

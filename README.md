@@ -114,3 +114,15 @@ Signoff uploads refresh snapshot membership transactionally while retaining prev
 ## Imported status values
 
 Uploads support `eco_master.status` defined as `ENUM('Controller','Reviewer 1','Reviewer 2','Complete')`. The importer preserves the existing column definition. It removes `# No Controller` first and skips rows whose cleaned status is blank. For remaining rows it normalizes capitalization and whitespace, and accepts `Reviewer1` / `Reviewer2` as `Reviewer 1` / `Reviewer 2`. Unsupported nonblank statuses are rejected with the ECO and source row for SearchResult uploads; signoff-only master creation identifies the ECO. Values such as `Open` or `Closed` cannot identify a reviewer stage and must be corrected in the source report. An unsupported value prevents the upload from saving any imported records.
+
+## Separate PMC and QA contact columns
+
+`eco_master` now includes nullable TEXT columns `pmc_name`, `pmc_email`, `qa_name`, and `qa_email`. SearchResult uploads populate them automatically. Original `pmc_site` and `qa_site` values remain for the existing interface, filters, and CSV exports.
+
+For an existing database, run from the project root with the application's DB environment variables:
+
+```sh
+php database/migrate_contacts.php
+```
+
+This adds missing columns and backfills existing `NAME (email)` contacts. It leaves populated contact groups and original site values untouched. Multiple contacts use semicolon-separated names and emails in matching order; a missing name/email uses an empty position, or NULL when that entire field is absent. Name-only values are preserved. The migration preserves `updated_at` and the status ENUM. No SQL dump needs to be re-imported.

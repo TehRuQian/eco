@@ -73,6 +73,10 @@ class ECOProcessor
                         `cut_in_date` DATETIME NULL,
                         `pmc_site` VARCHAR(150) NULL,
                         `qa_site` VARCHAR(150) NULL,
+                        `pmc_name` TEXT NULL,
+                        `pmc_email` TEXT NULL,
+                        `qa_name` TEXT NULL,
+                        `qa_email` TEXT NULL,
                         `originated_date` DATETIME NULL,
                         `completed_date` DATETIME NULL,
                         `year` INT NULL,
@@ -86,6 +90,10 @@ class ECOProcessor
             } catch (Throwable $e) {}
         } else {
             $requiredMaster = [
+                'pmc_name' => 'TEXT NULL',
+                'pmc_email' => 'TEXT NULL',
+                'qa_name' => 'TEXT NULL',
+                'qa_email' => 'TEXT NULL',
                 'wip_action'      => "VARCHAR(100) NULL",
                 'fg_action'       => "VARCHAR(100) NULL",
                 'warehouse_action' => "VARCHAR(100) NULL",
@@ -238,6 +246,33 @@ class ECOProcessor
         // Normalize Unicode spaces
         $value = preg_replace('/\s+/u', ' ', $value);
         return trim($value);
+    }
+
+    /** Split semicolon-separated NAME (email) contacts, preserving order. */
+    public static function splitSiteContacts(?string $value): array
+    {
+        $value = self::cleanText($value);
+        if ($value === '') return ['name' => null, 'email' => null];
+        $names = [];
+        $emails = [];
+        foreach (explode(';', $value) as $contact) {
+            $contact = trim($contact);
+            if ($contact === '') continue;
+            if (preg_match('/^(.*?)\s*\(([^()\s]+@[^()\s]+)\)$/u', $contact, $match)) {
+                $names[] = trim($match[1]);
+                $emails[] = $match[2];
+            } elseif (filter_var($contact, FILTER_VALIDATE_EMAIL)) {
+                $names[] = '';
+                $emails[] = $contact;
+            } else {
+                $names[] = $contact;
+                $emails[] = '';
+            }
+        }
+        return [
+            'name' => count(array_filter($names, fn($v) => $v !== '')) ? implode(';', $names) : null,
+            'email' => count(array_filter($emails, fn($v) => $v !== '')) ? implode(';', $emails) : null,
+        ];
     }
 
     /**
@@ -698,6 +733,8 @@ class ECOProcessor
             // PMC & QA sites directly from SearchResult
             $pmcSite = self::cleanText((string)($row[$masterMap['pmc_site']] ?? ''));
             $qaSite  = self::cleanText((string)($row[$masterMap['qa_site']] ?? ''));
+            $pmcContact = self::splitSiteContacts($pmcSite);
+            $qaContact = self::splitSiteContacts($qaSite);
 
             $masterData[$ecoNo] = [
                 'eco_no'                     => $ecoNo,
@@ -717,6 +754,10 @@ class ECOProcessor
                 'raw_cut_in_date'            => $rawCutIn,
                 'pmc_site'                   => $pmcSite,
                 'qa_site'                    => $qaSite,
+                'pmc_name' => $pmcContact['name'],
+                'pmc_email' => $pmcContact['email'],
+                'qa_name' => $qaContact['name'],
+                'qa_email' => $qaContact['email'],
                 'originated_date'            => $dtOriginated ? $dtOriginated->format('Y-m-d H:i:s') : null,
                 'completed_date'             => $dtCompleted ? $dtCompleted->format('Y-m-d H:i:s') : null,
                 'year'                       => $year,
@@ -765,6 +806,11 @@ class ECOProcessor
         };
 
         $masterCols   = $getTableColumns('eco_master');
+        foreach (['pmc_name', 'pmc_email', 'qa_name', 'qa_email'] as $column) {
+            if (!in_array($column, $masterCols, true)) {
+                throw new RuntimeException('Missing contact column ' . $column . '. Run php database/migrate_contacts.php first.');
+            }
+        }
         $signoffCols  = $getTableColumns('eco_signoff');
         $trackingCols = $getTableColumns('eco_tracking');
 
@@ -825,6 +871,10 @@ class ECOProcessor
                     'cut_in_date'                => $m['cut_in_date'],
                     'pmc_site'                   => $m['pmc_site'],
                     'qa_site'                    => $m['qa_site'],
+                    'pmc_name' => $m['pmc_name'],
+                    'pmc_email' => $m['pmc_email'],
+                    'qa_name' => $m['qa_name'],
+                    'qa_email' => $m['qa_email'],
                     'originated_date'            => $m['originated_date'],
                     'completed_date'             => $m['completed_date'],
                     'year'                       => $m['year'],
