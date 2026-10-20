@@ -33,7 +33,7 @@ $dbSetting = static function (string $key, string $default) use ($localSettings)
 $host     = $dbSetting('DB_HOST', 'localhost');
 $dbname   = $dbSetting('DB_NAME', 'eco_db');
 $username = $dbSetting('DB_USER', 'myuser');
-$password = $dbSetting('DB_PASS', '');
+$password = $dbSetting('DB_PASS', 'StrongPassword123!');
 unset($localSettings, $dbSetting, $value, $line);
 
 $dsn = "mysql:host={$host};dbname={$dbname};charset=utf8mb4";
