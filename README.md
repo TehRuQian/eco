@@ -118,7 +118,7 @@ Uploads support `eco_master.status` defined as `ENUM('Controller','Reviewer 1','
 
 ## Separate PMC and QA contact columns
 
-`eco_master` now includes nullable TEXT columns `pmc_name`, `pmc_email`, `qa_name`, and `qa_email`. SearchResult uploads populate them automatically. The interface, API, and CSV exports reconstruct the existing site labels from these four columns. Legacy `pmc_site` and `qa_site` database columns are no longer required or automatically created.
+`eco_master` now includes nullable TEXT columns `pmc_name`, `pmc_email`, `qa_name`, and `qa_email`. SearchResult uploads populate them automatically. The interface, API, and CSV exports reconstruct the existing site labels from these four columns. Legacy `pmc_site` and `qa_site` database columns are no longer required or automatically created. Imports do not write to those legacy columns even when they still exist in an older database.
 
 For an existing database, run from the project root with the application's DB environment variables:
 

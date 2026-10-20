@@ -136,6 +136,11 @@ try {
             $sheet->disconnectWorksheets();
         }
         $db = new ImportTestPDO();
+        // Existing installations can retain short legacy columns. Never write to them.
+        if ($extension !== 'csv') {
+            $db->columns['eco_master'][] = 'pmc_site';
+            $db->columns['eco_master'][] = 'qa_site';
+        }
         $processor = new ECOProcessor($db);
         $validation = $processor->preFlightCheck($file, 'SearchResult.' . $extension);
         check($validation['valid'], true, "$extension validation");
