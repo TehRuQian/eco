@@ -74,7 +74,6 @@ Run commands from the project root.
    | Variable | Purpose |
    |---|---|
    | `DB_HOST` | Database host; defaults to `localhost` |
-   | `DB_PORT` | Database port; defaults to `3306` |
    | `DB_NAME` | Database name; defaults to `eco_db` |
    | `DB_USER` | Database username |
    | `DB_PASS` | Database password |

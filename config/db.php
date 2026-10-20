@@ -16,7 +16,7 @@ if (is_readable($envFile)) {
         }
         [$key, $value] = explode('=', $line, 2);
         $key = trim(trim($key), "\"'");
-        if (!in_array($key, ['DB_HOST', 'DB_NAME', 'DB_USER', 'DB_PASS', 'DB_PORT'], true)) {
+        if (!in_array($key, ['DB_HOST', 'DB_NAME', 'DB_USER', 'DB_PASS'], true)) {
             continue;
         }
         $value = trim($value);
@@ -34,10 +34,9 @@ $host     = $dbSetting('DB_HOST', 'localhost');
 $dbname   = $dbSetting('DB_NAME', 'eco_db');
 $username = $dbSetting('DB_USER', 'myuser');
 $password = $dbSetting('DB_PASS', '');
-$port     = $dbSetting('DB_PORT', '3306');
 unset($localSettings, $dbSetting, $value, $line);
 
-$dsn = "mysql:host={$host};port={$port};dbname={$dbname};charset=utf8mb4";
+$dsn = "mysql:host={$host};dbname={$dbname};charset=utf8mb4";
 $options = [
     PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
