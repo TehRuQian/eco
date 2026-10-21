@@ -45,13 +45,18 @@ $dt2 = ECOProcessor::parseAgileDate("2026-09-21");
 assertEq($dt2 ? $dt2->format('Y-m-d') : null, "2026-09-21", "3.2 ISO standard date format");
 
 // 4. Thursday-based Work Week Calculation
-// 2026-09-21 is a Monday. +3 days = Thursday 2026-09-24 -> ISO Week 39
+// Base week 39 shifts to company WW40 in 2026.
 $dtMon = new DateTime('2026-09-21');
-assertEq(ECOProcessor::calculateWorkWeek($dtMon), 39, "4.1 Thursday-based WW on Monday 2026-09-21 (+3d = Thu W39)");
+assertEq(ECOProcessor::calculateWorkWeek($dtMon), 40, "4.1 Base WW39 shifts to WW40 on Monday");
 
-// 2026-09-24 is a Thursday. +3 days = Sunday 2026-09-27 -> ISO Week 39 (start of Thursday cycle)
+// The same correction applies on Thursday.
 $dtThu = new DateTime('2026-09-24');
-assertEq(ECOProcessor::calculateWorkWeek($dtThu), 39, "4.2 Thursday-based WW on Thursday 2026-09-24 (+3d = Sun W39)");
+assertEq(ECOProcessor::calculateWorkWeek($dtThu), 40, "4.2 Base WW39 shifts to WW40 on Thursday");
+assertEq(ECOProcessor::calculateWorkWeek(new DateTime('2026-03-26')), 13, "4.3 WW13 remains unchanged");
+assertEq(ECOProcessor::calculateWorkWeek(new DateTime('2026-03-27')), 15, "4.4 First base WW14 date shifts to WW15");
+assertEq(ECOProcessor::calculateWorkWeek(new DateTime('2026-10-21')), 44, "4.5 Current base WW43 shifts to WW44");
+assertEq(ECOProcessor::calculateWorkWeek(new DateTime('2025-09-21')), 39, "4.6 Other years remain unchanged");
+assertEq($dtMon->format('Y-m-d'), '2026-09-21', "4.7 Work week calculation preserves the input date");
 
 // 5. Due Date Calculation (Originated Date + 14 calendar days)
 $dueDt = ECOProcessor::calculateDueDate($dt2);

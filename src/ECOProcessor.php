@@ -410,11 +410,16 @@ class ECOProcessor
      * Thursday-based Work Week Calculation
      * Formula: Adjusted Date = Date Originated + 3 days
      * WW = ISO Week Number of Adjusted Date
+     * For originated dates in 2026, skip WW14 by adding one to WW14 and above.
      */
     public static function calculateWorkWeek(DateTime $originatedDate): int
     {
         $adjustedDate = (clone $originatedDate)->modify('+3 days');
-        return (int)$adjustedDate->format('W');
+        $week = (int)$adjustedDate->format('W');
+        if ($originatedDate->format('Y') === '2026' && $week >= 14) {
+            $week++;
+        }
+        return $week;
     }
 
     /**
