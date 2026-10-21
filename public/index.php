@@ -565,10 +565,10 @@ if ($pdo) {
 
                             <!-- Actions -->
                             <td style="text-align:center;">
-                                <button type="button" class="btn btn-outline btn-sm open-edit-modal" data-eco="<?= $ecoNo ?>" title="Edit tracking details">
+                                <button type="button" class="btn btn-primary btn-sm open-edit-modal" data-eco="<?= $ecoNo ?>" title="Edit tracking details">
                                     Edit
                                 </button>
-                                <button type="button" class="btn btn-outline btn-sm archive-eco-button" data-eco="<?= h($ecoNo) ?>">Archive</button>
+                                <button type="button" class="btn btn-secondary btn-sm archive-eco-button" data-eco="<?= h($ecoNo) ?>">Archive</button>
                             </td>
                         </tr>
 
@@ -663,7 +663,7 @@ if ($pdo) {
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-outline" id="cancelEditModal">Cancel</button>
+                <button type="button" class="btn btn-secondary" id="cancelEditModal">Cancel</button>
                 <button type="submit" class="btn btn-primary" id="saveTrackingBtn">Save Changes</button>
             </div>
         </form>
@@ -707,7 +707,7 @@ if ($pdo) {
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline" id="preFlightCheckBtn">Run Pre-Flight Check</button>
                 <button type="submit" class="btn btn-primary" id="startImportBtn">Start Import</button>
-                <button type="button" class="btn btn-outline" id="cancelUploadModal">Cancel</button>
+                <button type="button" class="btn btn-secondary" id="cancelUploadModal">Cancel</button>
             </div>
         </form>
     </div>
@@ -728,17 +728,29 @@ if ($pdo) {
         </div>
     </div>
 </div>
-<dialog id="archivedEcosDialog" class="archive-dialog">
-    <div class="archive-dialog-heading"><h2>Archived ECOs</h2><button type="button" data-close-archive-dialog class="btn btn-outline btn-sm">Close</button></div>
-    <p>Archived ECOs are excluded from the dashboard and normal exports. Their tracking and signoff history is retained.</p>
+<dialog id="archivedEcosDialog" class="archive-dialog" aria-labelledby="archivedEcosTitle">
+    <div class="archive-dialog-heading">
+        <div class="archive-list-title">
+            <span class="archive-list-icon" aria-hidden="true"><svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="4" rx="1"/><path d="M5 7v13h14V7M10 11h4"/></svg></span>
+            <div><h2 id="archivedEcosTitle">Archived ECOs</h2><span class="archive-list-subtitle">Review and restore archived records</span></div>
+        </div>
+        <button type="button" data-close-archive-dialog class="btn btn-secondary btn-sm">Close</button>
+    </div>
+    <p class="archive-list-notice">Archived records are hidden from the dashboard and normal exports. Tracking and signoff history is preserved.</p>
     <p id="archivedEcosMessage" role="status"></p>
     <div class="archive-list-scroll"><table class="eco-table"><thead><tr><th>ECO</th><th>Subject</th><th>Archived at</th><th>Action</th></tr></thead><tbody id="archivedEcosRows"></tbody></table></div>
 </dialog>
 <input type="hidden" id="archiveCsrfToken" value="<?= h($_SESSION['csrf_token']) ?>">
 <dialog id="archiveConfirmationDialog" class="archive-dialog archive-action-dialog" aria-labelledby="archiveConfirmationTitle" aria-describedby="archiveConfirmationMessage">
+    <button type="button" data-close-archive-dialog class="archive-confirmation-close" aria-label="Close confirmation">&times;</button>
+    <div class="archive-success-icon" aria-hidden="true">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"/></svg>
+    </div>
     <h2 id="archiveConfirmationTitle">ECO archived</h2>
     <p id="archiveConfirmationMessage" role="status"></p>
-    <button type="button" data-close-archive-dialog class="btn btn-primary" autofocus>OK</button>
+    <div class="archive-confirmation-footer">
+        <button type="button" data-close-archive-dialog class="btn btn-primary" autofocus>Done</button>
+    </div>
 </dialog>
 <script src="assets/js/app.js?v=<?= (int)filemtime(__DIR__ . '/assets/js/app.js') ?>"></script>
 </body>

@@ -405,6 +405,30 @@ tr.eco-row.expanded td {
 }
 
 /* Row highlights */
+tr.eco-row.highlight-new td {
+    background-color: #ecfdf5;
+}
+tr.eco-row.highlight-new td:first-child {
+    border-left: 4px solid #10b981;
+}
+.btn.btn-new-highlight {
+    background: #dcfce7;
+    border-color: #86efac;
+    color: #166534;
+}
+.btn.btn-new-highlight:hover {
+    background: #bbf7d0;
+    border-color: #4ade80;
+}
+.btn.btn-new-highlight:focus-visible {
+    outline: 3px solid #86efac;
+    outline-offset: 2px;
+}
+.badge-new {
+    background: #d1fae5;
+    color: #065f46;
+    border: 1px solid #6ee7b7;
+}
 tr.eco-row.highlight-changed {
     background-color: #faf5ff;
 }
@@ -790,6 +814,62 @@ table.eco-table td.signoff-cell { vertical-align: bottom; padding-top: 14px; pad
 .archive-dialog { position: fixed; inset: 0; margin: auto; box-sizing: border-box; overflow: auto; width: min(1100px, calc(100vw - 48px)); max-height: 85vh; padding: 24px; border: 1px solid var(--border-color); border-radius: 12px; color: var(--text-primary); }
 .archive-dialog::backdrop { background: rgba(15, 23, 42, .45); }
 .archive-action-dialog { width: min(480px, calc(100vw - 48px)); }
+#archiveConfirmationDialog {
+    padding: 32px;
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    box-shadow: 0 24px 80px rgba(15, 23, 42, .22);
+    text-align: center;
+}
+#archiveConfirmationDialog::backdrop {
+    background: rgba(15, 23, 42, .48);
+    backdrop-filter: blur(4px);
+}
+.archive-success-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 64px;
+    height: 64px;
+    margin: 4px auto 20px;
+    color: #059669;
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    border-radius: 50%;
+    box-shadow: 0 0 0 6px #f0fdf4;
+}
+#archiveConfirmationDialog h2 {
+    margin: 0 0 10px;
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -.5px;
+    color: #0f172a;
+}
+#archiveConfirmationDialog p {
+    margin: 0;
+    color: #64748b;
+    font-size: 14px;
+    line-height: 1.7;
+    overflow-wrap: anywhere;
+}
+.archive-confirmation-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: #64748b;
+    font-size: 25px;
+    cursor: pointer;
+}
+.archive-confirmation-close:hover { background: #f1f5f9; color: #0f172a; }
+.archive-confirmation-close:focus-visible { outline: 2px solid #0284c7; outline-offset: 2px; }
+.archive-confirmation-footer { margin-top: 26px; }
+.archive-confirmation-footer .btn { justify-content: center; min-width: 140px; padding: 11px 24px; border-radius: 10px; }
 .archive-dialog-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .archive-dialog-heading h2 { margin: 0; font-size: 20px; }
 .archive-dialog p { margin: 12px 0; }
@@ -797,5 +877,86 @@ table.eco-table td.signoff-cell { vertical-align: bottom; padding-top: 14px; pad
 .archive-dialog input:not([type="hidden"]), .archive-dialog textarea { display: block; box-sizing: border-box; width: 100%; margin-top: 6px; padding: 9px; border: 1px solid var(--border-color); border-radius: 6px; font: inherit; }
 .archive-list-scroll { overflow: auto; max-height: 55vh; }
 .archive-list-scroll td { white-space: normal; overflow-wrap: anywhere; min-width: 100px; }
+#archivedEcosDialog {
+    width: min(1120px, calc(100vw - 40px));
+    padding: 28px;
+    border-radius: 20px;
+    border-color: #e2e8f0;
+    box-shadow: 0 24px 80px rgba(15, 23, 42, .22);
+}
+#archivedEcosDialog::backdrop { background: rgba(15, 23, 42, .48); backdrop-filter: blur(4px); }
+.archive-list-title { display: flex; gap: 14px; align-items: center; }
+.btn.btn-secondary {
+    background: #dc2626;
+    border-color: #dc2626;
+    color: #fff;
+    border-radius: 8px;
+}
+.btn.btn-secondary:hover {
+    background: #b91c1c;
+    border-color: #b91c1c;
+}
+.btn.btn-secondary:focus-visible {
+    outline: 3px solid #fca5a5;
+    outline-offset: 2px;
+}
+.archive-list-icon { display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 48px; height: 48px; border: 1px solid #dbeafe; border-radius: 14px; background: #eff6ff; color: #2563eb; }
+.archive-list-subtitle { display: block; margin-top: 4px; color: #64748b; font-size: 13px; }
+#archivedEcosDialog .archive-list-notice { margin: 22px 0 18px; padding: 12px 16px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 13px; line-height: 1.6; color: #64748b; }
+#archivedEcosMessage { font-size: 12px; font-weight: 600; color: #64748b; }
+#archivedEcosDialog #archivedEcosMessage.archive-empty-state {
+    margin: 20px 0 4px;
+    padding: 40px 20px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 14px;
+    background: #f8fafc;
+    color: #64748b;
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 1.6;
+    text-align: center;
+}
+#archivedEcosDialog .archive-list-scroll { border: 1px solid #e2e8f0; border-radius: 12px; }
+#archivedEcosDialog .eco-table { width: 100%; table-layout: fixed; margin: 0; }
+#archivedEcosDialog .eco-table th { position: sticky; top: 0; z-index: 1; background: #f8fafc; color: #64748b; font-size: 11px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; padding: 14px 18px; }
+#archivedEcosDialog .eco-table td { padding: 18px; vertical-align: top; font-size: 13px; line-height: 1.7; color: #475569; min-width: 0; }
+#archivedEcosDialog .eco-table th:first-child { width: 145px; }
+#archivedEcosDialog .eco-table td:first-child { white-space: nowrap; overflow-wrap: normal; font-weight: 700; color: #1e40af; }
+#archivedEcosDialog .eco-table th:nth-child(3) { width: 165px; }
+#archivedEcosDialog .eco-table th:last-child { width: 120px; }
+#archivedEcosDialog .eco-table td:nth-child(3) { font-size: 12px; font-variant-numeric: tabular-nums; color: #64748b; }
+#archivedEcosDialog .eco-table tbody tr:last-child td { border-bottom: 0; }
+#archivedEcosDialog .eco-table tbody tr:hover td { background: #f8fafc; }
+#archivedEcosDialog .eco-table .btn { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; border-radius: 8px; }
+#archivedEcosDialog .eco-table .btn:hover { background: #dbeafe; }
+@media (max-width: 700px) {
+    #archivedEcosDialog { padding: 20px; }
+    #archivedEcosDialog .eco-table { min-width: 700px; }
+    .archive-list-subtitle { font-size: 12px; }
+}
 #archiveActionError { color: #b91c1c; }
 .archive-eco-button { margin-top: 5px; }
+.btn.archive-eco-button,
+#openArchivedEcos {
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: #b91c1c;
+    box-shadow: none;
+}
+.btn.archive-eco-button:hover,
+#openArchivedEcos:hover {
+    background: #fee2e2;
+    border-color: #fca5a5;
+    color: #991b1b;
+}
+.btn.open-edit-modal {
+    background: #eff6ff;
+    border-color: #bfdbfe;
+    color: #1d4ed8;
+    box-shadow: none;
+}
+.btn.open-edit-modal:hover {
+    background: #dbeafe;
+    border-color: #93c5fd;
+    color: #1e40af;
+}

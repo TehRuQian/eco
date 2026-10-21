@@ -43,6 +43,9 @@ document.addEventListener('DOMContentLoaded', function () {
         archivedDialog.showModal();
         const message = document.getElementById('archivedEcosMessage');
         const rows = document.getElementById('archivedEcosRows');
+        const tableContainer = rows.closest('.archive-list-scroll');
+        tableContainer.hidden = true;
+        message.classList.remove('archive-empty-state');
         rows.replaceChildren();
         message.textContent = 'Loading…';
         try {
@@ -50,6 +53,8 @@ document.addEventListener('DOMContentLoaded', function () {
             const data = await response.json();
             if (!response.ok || !data.success) throw new Error(data.message || 'Unable to load archived ECOs.');
             message.textContent = data.records.length ? `${data.records.length} archived ECO(s).` : 'No archived ECOs.';
+            tableContainer.hidden = data.records.length === 0;
+            message.classList.toggle('archive-empty-state', data.records.length === 0);
             for (const record of data.records) {
                 const row = document.createElement('tr');
                 for (const key of ['eco_no', 'subject', 'archived_at']) {
@@ -439,6 +444,38 @@ document.addEventListener('DOMContentLoaded', function () {
     const preFlightBtn = document.getElementById('preFlightCheckBtn');
     const importBtn = document.getElementById('startImportBtn');
     const preFlightResults = document.getElementById('preFlightResults');
+    let uploadCompleted = false;
+    const newEcoStorageKey = `eco-new-imports:${window.location.pathname}`;
+    function readNewEcos() {
+        try {
+            const value = JSON.parse(sessionStorage.getItem(newEcoStorageKey) || '[]');
+            return Array.isArray(value) ? value.filter(eco => typeof eco === 'string') : [];
+        } catch { return []; }
+    }
+    const newEcos = new Set(readNewEcos());
+    let visibleNewCount = 0;
+    document.querySelectorAll('tr.eco-row[data-eco]').forEach(row => {
+        if (!newEcos.has(row.dataset.eco)) return;
+        row.classList.add('highlight-new');
+        const badge = document.createElement('div');
+        badge.className = 'badge badge-new';
+        badge.textContent = 'NEW ECO';
+        row.cells[1]?.appendChild(badge);
+        visibleNewCount++;
+    });
+    if (visibleNewCount && openUploadBtn) {
+        const dismissNewBtn = document.createElement('button');
+        dismissNewBtn.type = 'button';
+        dismissNewBtn.className = 'btn btn-new-highlight btn-sm';
+        dismissNewBtn.textContent = `Dismiss New ECO Highlights (${visibleNewCount})`;
+        dismissNewBtn.addEventListener('click', () => {
+            try { sessionStorage.removeItem(newEcoStorageKey); } catch { /* Storage unavailable. */ }
+            document.querySelectorAll('.highlight-new').forEach(row => row.classList.remove('highlight-new'));
+            document.querySelectorAll('.badge-new').forEach(badge => badge.remove());
+            dismissNewBtn.remove();
+        });
+        openUploadBtn.closest('.header-actions').prepend(dismissNewBtn);
+    }
 
     if (openUploadBtn) {
         openUploadBtn.addEventListener('click', () => {
@@ -451,6 +488,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function closeUpload() {
         if (uploadModal) uploadModal.classList.remove('active');
+        if (uploadCompleted) window.location.reload();
     }
     if (closeUploadBtn) closeUploadBtn.addEventListener('click', closeUpload);
     if (cancelUploadBtn) cancelUploadBtn.addEventListener('click', closeUpload);
@@ -534,17 +572,22 @@ document.addEventListener('DOMContentLoaded', function () {
                 importBtn.textContent = 'Start Import';
 
                 if (data.success) {
+                    uploadCompleted = true;
+                    try {
+                        const importedEcos = data.stats?.new_eco_nos || [];
+                        sessionStorage.setItem(newEcoStorageKey, JSON.stringify([...new Set([...readNewEcos(), ...importedEcos])]));
+                    } catch { /* Import remains successful if browser storage is unavailable. */ }
+                    importBtn.disabled = true;
+                    if (preFlightBtn) preFlightBtn.disabled = true;
+                    if (cancelUploadBtn) cancelUploadBtn.textContent = 'Close';
                     showToast(data.message, 'success', 5000);
                     preFlightResults.innerHTML = `
                         <div style="background:#dcfce7; color:#15803d; border:1px solid #86efac; border-radius:6px; padding:14px; font-size:13px;">
                             <strong>✓ ${data.message}</strong>
                             ${(data.warnings || []).map(w => `<p>${w}</p>`).join('')}
-                            <p style="margin-top:8px;">Reloading dashboard in 2 seconds...</p>
+                            <p style="margin-top:8px;">Review the import results, then click Close to refresh the dashboard.</p>
                         </div>
                     `;
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1800);
                 } else {
                     const errList = data.errors ? data.errors.map(e => `<li>${e}</li>`).join('') : `<li>${data.message || 'Import failed'}</li>`;
                     preFlightResults.innerHTML = `

@@ -866,6 +866,7 @@ class ECOProcessor
 
         try {
             $stats = [
+                'new_eco_nos'       => [],
                 'master_inserted'   => 0,
                 'master_updated'    => 0,
                 'tracking_created'  => 0,
@@ -926,6 +927,7 @@ class ECOProcessor
                     $stmt = $this->pdo->prepare($insertSql);
                     $stmt->execute(array_values($filteredMaster));
                     $stats['master_inserted']++;
+                    $stats['new_eco_nos'][] = $ecoNo;
                 } else {
                     $updateFields = $filteredMaster;
                     unset($updateFields['eco_no']); // do not update primary key
@@ -1018,6 +1020,7 @@ class ECOProcessor
                         $this->pdo->prepare("INSERT INTO `eco_master` ({$columns}) VALUES ({$holders})")
                             ->execute(array_values($newMaster));
                         $stats['master_inserted']++;
+                        $stats['new_eco_nos'][] = $ecoNo;
 
                         if (!empty($trackingCols)) {
                             $newTracking = array_filter([
