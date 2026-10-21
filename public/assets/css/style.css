@@ -936,6 +936,21 @@ table.eco-table td.signoff-cell { vertical-align: bottom; padding-top: 14px; pad
 }
 #archiveActionError { color: #b91c1c; }
 .archive-eco-button { margin-top: 5px; }
+#resetFiltersBtn {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    color: #475569;
+    box-shadow: none;
+}
+#resetFiltersBtn:hover {
+    background: #e2e8f0;
+    border-color: #94a3b8;
+    color: #334155;
+}
+#resetFiltersBtn:focus-visible {
+    outline: 3px solid #94a3b8;
+    outline-offset: 2px;
+}
 .btn.archive-eco-button,
 #openArchivedEcos {
     background: #fef2f2;
