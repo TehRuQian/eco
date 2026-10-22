@@ -232,6 +232,14 @@ try {
                 $qaVal = ($qaVal === 1) ? 0 : 1;
             }
 
+            // A recorded completion date keeps both signoffs completed.
+            $completionCheck = $pdo->prepare('SELECT completed_date FROM eco_master WHERE eco_no = ?');
+            $completionCheck->execute([$ecoNo]);
+            if ($completionCheck->fetchColumn()) {
+                $pmcVal = 1;
+                $qaVal = 1;
+            }
+
             // Recalculate status progress according to Section 19
             $newProgress = ECOProcessor::calculateStatusProgress($pmcVal, $qaVal);
             $user = trim((string)($_POST['updated_by'] ?? 'User'));

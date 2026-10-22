@@ -752,19 +752,22 @@ textarea.form-control {
 
 /* Signoff review uses the dashboard table, badges, and form controls. */
 #missingSignoffModal { padding: 24px; }
-.signoff-review-box { width: 100%; max-width: 1440px; max-height: 92vh; max-height: 92dvh; display: flex; flex-direction: column; overflow: hidden; }
+#missingSignoffModal { height: 100dvh; padding: 16px; }
+.signoff-review-box { width: 100%; max-width: 1440px; max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); display: flex; flex-direction: column; overflow: hidden; }
 .signoff-review-box .modal-header { flex-shrink: 0; }
-.signoff-review-box .modal-body { display: flex; flex-direction: column; min-height: 0; overflow: hidden; padding: 20px 24px 24px; }
+.signoff-review-box .modal-body { display: flex; flex-direction: column; min-height: 0; overflow: hidden; padding: 16px 24px 20px; }
 .signoff-review-help { color: var(--text-secondary); font-size: 13px; line-height: 1.6; margin: 0 0 12px; }
 .signoff-review-message { color: var(--text-secondary); font-size: 13px; font-weight: 600; margin: 0 0 14px; }
-.signoff-review-table { border-radius: var(--radius-md); min-height: 0; }
-.signoff-review-table .table-responsive { max-height: 68vh; max-height: 68dvh; overflow: auto; }
+.signoff-review-search { flex-shrink: 0; margin-bottom: 12px; }
+.signoff-review-search label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; }
+.signoff-review-table { border-radius: var(--radius-md); min-height: 0; display: flex; flex-direction: column; }
+.signoff-review-table .table-responsive { min-height: 0; max-height: none; overflow: auto; scrollbar-gutter: stable; }
 .signoff-review-table .eco-table { min-width: 850px; table-layout: fixed; font-size: 14px; }
-.signoff-review-table .eco-table th:nth-child(1) { width: 16%; }
+.signoff-review-table .eco-table th:nth-child(1) { width: 14%; }
 .signoff-review-table .eco-table th:nth-child(2), .signoff-review-table .eco-table th:nth-child(3) { width: 25%; }
-.signoff-review-table .eco-table th:nth-child(4) { width: 19%; }
-.signoff-review-table .eco-table th:nth-child(5) { width: 15%; }
-.signoff-review-table .eco-table td { padding: 14px; }
+.signoff-review-table .eco-table th:nth-child(4) { width: 17%; }
+.signoff-review-table .eco-table th:nth-child(5) { width: 19%; }
+.signoff-review-table .eco-table td { padding: 10px 14px; }
 .signoff-review-table .site-badge { max-width: none; white-space: normal; overflow-wrap: anywhere; font-size: 13px; line-height: 1.5; margin-bottom: 8px; }
 .signoff-review-box .signoff-review-help, .signoff-review-box .signoff-review-message { flex-shrink: 0; }
 .signoff-review-eco { color: var(--brand-accent); font-weight: 700; white-space: nowrap; }
@@ -775,10 +778,13 @@ textarea.form-control {
 .signoff-review-table .form-control { min-width: 115px; min-height: 40px; font-size: 14px; }
 @media (max-width: 760px) {
     #missingSignoffModal { padding: 10px; }
-    .signoff-review-box { max-height: 95vh; max-height: 95dvh; }
+    #missingSignoffModal { padding: 8px; }
+    .signoff-review-box { max-height: calc(100vh - 16px); max-height: calc(100dvh - 16px); }
     .signoff-review-box .modal-header, .signoff-review-box .modal-body { padding: 14px; }
     .signoff-review-box .modal-header h3 { font-size: 16px; }
-    .signoff-review-table .table-responsive { max-height: 65vh; max-height: 65dvh; }
+    .signoff-review-box .modal-body { overflow-y: auto; }
+    .signoff-review-table { flex-shrink: 0; }
+    .signoff-review-table .table-responsive { max-height: 55vh; max-height: 55dvh; }
 }
 /* Keep PMC and QA controls at the same baseline in each row. */
 table.eco-table td.signoff-cell { vertical-align: bottom; padding-top: 14px; padding-bottom: 14px; }
@@ -797,10 +803,7 @@ table.eco-table td.signoff-cell { vertical-align: bottom; padding-top: 14px; pad
     border-radius: var(--radius-sm); box-shadow: 0 8px 24px rgba(15, 23, 42, .14);
 }
 .searchable-filter-panel[hidden] { display: none; }
-.searchable-filter-panel input {
-    box-sizing: border-box; width: 100%; padding: 8px 10px; font: inherit;
-    border: 1px solid var(--border-color); border-radius: var(--radius-sm);
-}
+.searchable-filter-panel .search-input { box-sizing: border-box; }
 .searchable-filter-options { max-height: 240px; overflow-y: auto; margin-top: 6px; }
 .searchable-filter-option {
     display: block; width: 100%; padding: 8px 10px; border: 0; background: #fff;

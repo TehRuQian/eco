@@ -327,8 +327,8 @@ if ($pdo) {
     <div class="filter-panel">
         <div class="filter-row-top">
             <div class="search-input-wrap">
-                <span class="search-icon">🔍</span>
-                <input type="text" id="searchBox" class="search-input" placeholder="Search ECO#, ECR#, Subject, Customer, Project...">
+                <span class="search-icon" aria-hidden="true">🔍</span>
+                <input type="search" id="searchBox" class="search-input" aria-label="Search ECOs" placeholder="Search ECO#, ECR#, Subject, Customer, Project...">
             </div>
 
             <div class="filter-meta">
@@ -721,6 +721,13 @@ if ($pdo) {
         </div>
         <div class="modal-body">
             <p class="signoff-review-help">PMC and QA checkboxes update tracking progress only. Status shows the saved database value. Select Controller, Reviewer 1, Reviewer 2, or Complete to update it.</p>
+            <div class="signoff-review-search">
+                <label for="missingSignoffSearch">Search pending ECOs</label>
+                <div class="search-input-wrap">
+                    <span class="search-icon" aria-hidden="true">🔍</span>
+                    <input type="search" id="missingSignoffSearch" class="search-input" placeholder="Search ECO#, PMC / QA site, progress or status..." autocomplete="off" aria-controls="missingSignoffRows">
+                </div>
+            </div>
             <p id="missingSignoffMessage" class="signoff-review-message" role="status"></p>
             <div class="table-card signoff-review-table"><div class="table-responsive">
                 <table class="eco-table"><thead><tr><th>ECO Number</th><th>PMC Site &amp; Signoff</th><th>QA Site &amp; Signoff</th><th>Tracker Progress</th><th>Status</th></tr></thead><tbody id="missingSignoffRows"></tbody></table></div>

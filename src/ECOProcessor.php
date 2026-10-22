@@ -239,7 +239,40 @@ class ECOProcessor
             performed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             INDEX idx_archive_history_eco (eco_no)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        self::applyCompletionDates($pdo);
         return ['success' => true, 'actions' => $actions];
+    }
+
+    /** Completion dates take precedence over uploaded or manually saved statuses. */
+    public static function applyCompletionDates(PDO $pdo): int
+    {
+        // Keep signoff membership intact: date-only records are not in the uploaded snapshot.
+        $changed = $pdo->exec("INSERT INTO eco_signoff
+                (eco_no, internal_status, previous_internal_status, status_changed, status_changed_at, in_latest_signoff)
+            SELECT em.eco_no, 'Complete', em.status, 1, NOW(), 0
+            FROM eco_master em
+            LEFT JOIN eco_signoff es ON es.eco_no = em.eco_no
+            WHERE em.archived_at IS NULL AND em.completed_date IS NOT NULL
+                AND es.eco_no IS NULL AND COALESCE(em.status, '') <> 'Complete'
+            ON DUPLICATE KEY UPDATE eco_no = VALUES(eco_no)");
+        $changed += $pdo->exec("UPDATE eco_signoff es
+            JOIN eco_master em ON em.eco_no = es.eco_no
+            SET es.previous_internal_status = COALESCE(es.internal_status, em.status),
+                es.internal_status = 'Complete', es.status_changed = 1, es.status_changed_at = NOW()
+            WHERE em.archived_at IS NULL AND em.completed_date IS NOT NULL
+                AND COALESCE(es.internal_status, '') <> 'Complete'");
+        $pdo->exec("UPDATE eco_master SET status = 'Complete', status_in_agile = 'Closed'
+            WHERE archived_at IS NULL AND completed_date IS NOT NULL
+                AND (COALESCE(status, '') <> 'Complete' OR COALESCE(status_in_agile, '') <> 'Closed')");
+        $pdo->exec("UPDATE eco_tracking et
+            JOIN eco_master em ON em.eco_no = et.eco_no
+            SET et.pmc_result_completed = 1, et.qa_result_completed = 1,
+                et.status_progress = 'Completed'
+            WHERE em.archived_at IS NULL AND em.completed_date IS NOT NULL
+                AND (COALESCE(et.pmc_result_completed, 0) <> 1
+                    OR COALESCE(et.qa_result_completed, 0) <> 1
+                    OR COALESCE(et.status_progress, '') <> 'Completed')");
+        return $changed;
     }
 
     /**
@@ -878,6 +911,7 @@ class ECOProcessor
 
             $stmtCheckMaster   = $this->pdo->prepare("SELECT `eco_no` FROM `eco_master` WHERE `eco_no` = ? LIMIT 1");
             $stmtCheckTracking = $this->pdo->prepare("SELECT `id` FROM `eco_tracking` WHERE `eco_no` = ? LIMIT 1");
+            $stmtCompletedDate = $this->pdo->prepare('SELECT completed_date FROM eco_master WHERE eco_no = ?');
             $stmtGetSignoff    = !empty($signoffCols)
                 ? $this->pdo->prepare("SELECT * FROM `eco_signoff` WHERE `eco_no` = ? LIMIT 1")
                 : null;
@@ -886,6 +920,18 @@ class ECOProcessor
             foreach ($masterData as $ecoNo => $m) {
                 $stmtCheckMaster->execute([$ecoNo]);
                 $exists = (bool)$stmtCheckMaster->fetchColumn();
+
+                if ($exists && !empty($m['completed_date'])) {
+                    // Preserve the prior master status before the incoming file overwrites it.
+                    $completionHistory = $this->pdo->prepare("INSERT INTO eco_signoff
+                            (eco_no, internal_status, in_latest_signoff)
+                        SELECT em.eco_no, em.status, 0 FROM eco_master em
+                        WHERE em.eco_no = ? AND em.archived_at IS NULL
+                            AND COALESCE(em.status, '') <> 'Complete'
+                            AND NOT EXISTS (SELECT 1 FROM eco_signoff es WHERE es.eco_no = em.eco_no)
+                        ON DUPLICATE KEY UPDATE eco_no = VALUES(eco_no)");
+                    $completionHistory->execute([$ecoNo]);
+                }
 
                 $allMasterFields = [
                     'eco_no'                     => $m['eco_no'],
@@ -1043,7 +1089,8 @@ class ECOProcessor
                     if ($isUnmatched) $stats['unmatched_signoff']++;
 
                     $oldStatus = $prevRecord ? ($prevRecord['internal_status'] ?? '') : null;
-                    $newStatus = $s['internal_status'];
+                    $stmtCompletedDate->execute([$ecoNo]);
+                    $newStatus = $stmtCompletedDate->fetchColumn() ? 'Complete' : $s['internal_status'];
 
                     $statusChanged = 0;
                     $statusChangedAt = null;
@@ -1102,6 +1149,7 @@ class ECOProcessor
                 }
             }
 
+            $stats['status_changed'] += self::applyCompletionDates($this->pdo);
             $this->pdo->commit();
 
             return [

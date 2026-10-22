@@ -79,7 +79,23 @@ document.addEventListener('DOMContentLoaded', function () {
     const reviewModal = document.getElementById('missingSignoffModal');
     const reviewRows = document.getElementById('missingSignoffRows');
     const reviewMessage = document.getElementById('missingSignoffMessage');
+    const reviewSearch = document.getElementById('missingSignoffSearch');
     let reviewChanged = false;
+    let reviewLoaded = false;
+    function filterReview() {
+        if (!reviewLoaded) return;
+        const query = reviewSearch.value.trim().toLocaleLowerCase();
+        let visible = 0;
+        for (const row of reviewRows.children) {
+            row.hidden = !row.dataset.search.includes(query);
+            if (!row.hidden) visible++;
+        }
+        const total = reviewRows.children.length;
+        reviewMessage.textContent = !total ? 'No Open ECOs are missing from user_signoff.'
+            : query ? (visible ? `${visible} of ${total} ECO(s) to review.` : 'No ECOs match your search.')
+            : `${total} ECO(s) to review.`;
+    }
+    reviewSearch.addEventListener('input', filterReview);
     async function reviewRequest(action, values) {
         const options = values ? {method: 'POST', body: new URLSearchParams(values)} : {};
         const response = await fetch(`api.php?action=${action}`, options);
@@ -88,6 +104,7 @@ document.addEventListener('DOMContentLoaded', function () {
         return data;
     }
     async function loadReview() {
+        reviewLoaded = false;
         reviewMessage.textContent = 'Loading...';
         reviewRows.replaceChildren();
         try {
@@ -95,6 +112,11 @@ document.addEventListener('DOMContentLoaded', function () {
             reviewMessage.textContent = data.records.length ? `${data.records.length} ECO(s) to review.` : 'No Open ECOs are missing from user_signoff.';
             for (const record of data.records) {
                 const row = document.createElement('tr');
+                function updateSearch() {
+                    row.dataset.search = [record.eco_no, record.pmc_site, record.qa_site,
+                        record.status_progress || 'Pending PMC', record.status].join(' ').toLocaleLowerCase();
+                }
+                updateSearch();
                 const cell = text => {
                     const td = document.createElement('td');
                     td.textContent = text;
@@ -129,6 +151,9 @@ document.addEventListener('DOMContentLoaded', function () {
                             const result = await reviewRequest('toggle_status', {eco_no: record.eco_no, field, updated_by: 'Signoff Review'});
                             checkbox.checked = Number(result[`${field}_result_completed`]) === 1;
                             updateProgress(result.status_progress);
+                            record.status_progress = result.status_progress;
+                            updateSearch();
+                            filterReview();
                             reviewChanged = true;
                         } catch (error) {
                             checkbox.checked = previous;
@@ -178,11 +203,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
                 reviewRows.appendChild(row);
             }
+            reviewLoaded = true;
+            filterReview();
         } catch (error) { reviewMessage.textContent = error.message; }
     }
     document.getElementById('openMissingSignoff').addEventListener('click', () => {
         reviewModal.classList.add('active');
-        document.getElementById('closeMissingSignoff').focus();
+        reviewSearch.focus();
         loadReview();
     });
     function closeReview() {
@@ -657,6 +684,14 @@ document.addEventListener('DOMContentLoaded', function () {
         panel.hidden = true;
         trigger.setAttribute('aria-controls', panel.id);
         const search = document.createElement('input');
+        const searchWrap = document.createElement('div');
+        searchWrap.className = 'search-input-wrap';
+        const searchIcon = document.createElement('span');
+        searchIcon.className = 'search-icon';
+        searchIcon.setAttribute('aria-hidden', 'true');
+        searchIcon.textContent = '🔍';
+        search.className = 'search-input';
+        searchWrap.append(searchIcon, search);
         search.type = 'search';
         search.placeholder = 'Search options…';
         search.setAttribute('aria-label', 'Search ' + label);
@@ -738,7 +773,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
         select.before(wrapper);
         wrapper.append(select, trigger, panel);
-        panel.append(search, options);
+        panel.append(searchWrap, options);
         select.hidden = true;
         searchableFilters.push({sync, close});
         sync();
