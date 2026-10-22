@@ -34,8 +34,11 @@ try {
     ECOProcessor::ensureSchema($pdo);
     switch ($action) {
         case 'get_archived_ecos':
-            $rows = $pdo->query('SELECT eco_no, subject, archived_at, archived_by, archive_reason
-                FROM eco_master WHERE archived_at IS NOT NULL ORDER BY archived_at DESC, eco_no')->fetchAll(PDO::FETCH_ASSOC);
+            $rows = $pdo->query("SELECT em.eco_no, em.subject, ah.performed_at AS archived_at
+                FROM eco_master em JOIN eco_archive_history ah ON ah.eco_no COLLATE utf8mb4_unicode_ci = em.eco_no COLLATE utf8mb4_unicode_ci
+                WHERE ah.id = (SELECT MAX(latest.id) FROM eco_archive_history latest WHERE latest.eco_no COLLATE utf8mb4_unicode_ci = em.eco_no COLLATE utf8mb4_unicode_ci)
+                    AND ah.action = 'archive'
+                ORDER BY ah.performed_at DESC, em.eco_no")->fetchAll(PDO::FETCH_ASSOC);
             jsonResponse(['success' => true, 'records' => $rows]);
             break;
 
@@ -56,7 +59,7 @@ try {
                 jsonResponse(['success' => false, 'message' => 'ECO number is required.'], 400);
             }
             $pdo->beginTransaction();
-            $stmt = $pdo->prepare('SELECT archived_at FROM eco_master WHERE eco_no = ? FOR UPDATE');
+            $stmt = $pdo->prepare('SELECT eco_no FROM eco_master WHERE eco_no = ? FOR UPDATE');
             $stmt->execute([$ecoNo]);
             $record = $stmt->fetch(PDO::FETCH_ASSOC);
             if (!$record) {
@@ -64,14 +67,13 @@ try {
                 jsonResponse(['success' => false, 'message' => 'ECO not found.'], 404);
             }
             $archiving = $action === 'archive_eco';
-            if (($record['archived_at'] !== null) === $archiving) {
+            $stmt = $pdo->prepare('SELECT action FROM eco_archive_history WHERE eco_no = ? ORDER BY id DESC LIMIT 1 FOR UPDATE');
+            $stmt->execute([$ecoNo]);
+            $isArchived = $stmt->fetchColumn() === 'archive';
+            if ($isArchived === $archiving) {
                 $pdo->rollBack();
                 jsonResponse(['success' => false, 'message' => 'ECO state changed. Reload the page.'], 409);
             }
-            $stmt = $archiving
-                ? $pdo->prepare('UPDATE eco_master SET archived_at = NOW(), archived_by = ?, archive_reason = ? WHERE eco_no = ?')
-                : $pdo->prepare('UPDATE eco_master SET archived_at = NULL, archived_by = NULL, archive_reason = NULL WHERE eco_no = ?');
-            $stmt->execute($archiving ? [$actor, $reason, $ecoNo] : [$ecoNo]);
             $stmt = $pdo->prepare('INSERT INTO eco_archive_history (eco_no, action, actor, reason) VALUES (?, ?, ?, ?)');
             $stmt->execute([$ecoNo, $archiving ? 'archive' : 'restore', $actor, $reason]);
             $pdo->commit();
@@ -153,9 +155,9 @@ try {
                     COALESCE(et.qa_result_completed, 0) AS qa_result_completed,
                     et.status_progress
                 FROM eco_master em
-                LEFT JOIN eco_tracking et ON et.eco_no = em.eco_no
-                WHERE em.archived_at IS NULL AND NOT EXISTS (SELECT 1 FROM eco_signoff es
-                    WHERE es.eco_no = em.eco_no AND es.in_latest_signoff = 1)
+                LEFT JOIN eco_tracking et ON et.eco_no COLLATE utf8mb4_unicode_ci = em.eco_no COLLATE utf8mb4_unicode_ci
+                WHERE COALESCE((SELECT ah.action FROM eco_archive_history ah WHERE ah.eco_no COLLATE utf8mb4_unicode_ci = em.eco_no COLLATE utf8mb4_unicode_ci ORDER BY ah.id DESC LIMIT 1), 'restore') <> 'archive' AND NOT EXISTS (SELECT 1 FROM eco_signoff es
+                    WHERE es.eco_no COLLATE utf8mb4_unicode_ci = em.eco_no COLLATE utf8mb4_unicode_ci AND es.in_latest_signoff = 1)
                 ORDER BY em.eco_no")->fetchAll(PDO::FETCH_ASSOC);
             $rows = array_map([ECOProcessor::class, 'withSiteLabels'], $rows);
             $rows = array_values(array_filter($rows, static function ($row) {
@@ -174,7 +176,7 @@ try {
                 jsonResponse(['success' => false, 'message' => 'Invalid ECO status.'], 400);
             }
             $pdo->beginTransaction();
-            $stmt = $pdo->prepare('SELECT status FROM eco_master WHERE eco_no = ? AND archived_at IS NULL FOR UPDATE');
+            $stmt = $pdo->prepare("SELECT status FROM eco_master WHERE eco_no = ? AND COALESCE((SELECT ah.action FROM eco_archive_history ah WHERE ah.eco_no COLLATE utf8mb4_unicode_ci = eco_master.eco_no COLLATE utf8mb4_unicode_ci ORDER BY ah.id DESC LIMIT 1), 'restore') <> 'archive' FOR UPDATE");
             $stmt->execute([$ecoNo]);
             $master = $stmt->fetch(PDO::FETCH_ASSOC);
             $stmt = $pdo->prepare('SELECT 1 FROM eco_signoff WHERE eco_no = ? AND in_latest_signoff = 1');
@@ -190,7 +192,7 @@ try {
             break;
         case 'toggle_status':
             $activeEco = ECOProcessor::normalizeEcoNo($_POST['eco_no'] ?? $_GET['eco_no'] ?? '');
-            $activeCheck = $pdo->prepare('SELECT 1 FROM eco_master WHERE eco_no = ? AND archived_at IS NULL');
+            $activeCheck = $pdo->prepare("SELECT 1 FROM eco_master WHERE eco_no = ? AND COALESCE((SELECT ah.action FROM eco_archive_history ah WHERE ah.eco_no COLLATE utf8mb4_unicode_ci = eco_master.eco_no COLLATE utf8mb4_unicode_ci ORDER BY ah.id DESC LIMIT 1), 'restore') <> 'archive'");
             $activeCheck->execute([$activeEco]);
             if (!$activeCheck->fetchColumn()) {
                 jsonResponse(['success' => false, 'message' => 'ECO is archived or unavailable. Restore it before editing.'], 409);
@@ -270,7 +272,7 @@ try {
          * ------------------------------------------------------------- */
         case 'update_tracking':
             $activeEco = ECOProcessor::normalizeEcoNo($_POST['eco_no'] ?? $_GET['eco_no'] ?? '');
-            $activeCheck = $pdo->prepare('SELECT 1 FROM eco_master WHERE eco_no = ? AND archived_at IS NULL');
+            $activeCheck = $pdo->prepare("SELECT 1 FROM eco_master WHERE eco_no = ? AND COALESCE((SELECT ah.action FROM eco_archive_history ah WHERE ah.eco_no COLLATE utf8mb4_unicode_ci = eco_master.eco_no COLLATE utf8mb4_unicode_ci ORDER BY ah.id DESC LIMIT 1), 'restore') <> 'archive'");
             $activeCheck->execute([$activeEco]);
             if (!$activeCheck->fetchColumn()) {
                 jsonResponse(['success' => false, 'message' => 'ECO is archived or unavailable. Restore it before editing.'], 409);
@@ -340,9 +342,9 @@ try {
                     et.first_mo_result, et.due_date, et.status_progress,
                     et.impact_assessment_checklist, et.pending_checklist, et.updated_by, et.updated_date
                 FROM eco_master em
-                LEFT JOIN eco_signoff es ON em.eco_no = es.eco_no AND es.in_latest_signoff = 1
-                LEFT JOIN eco_tracking et ON em.eco_no = et.eco_no
-                WHERE em.eco_no = ? AND em.archived_at IS NULL
+                LEFT JOIN eco_signoff es ON em.eco_no COLLATE utf8mb4_unicode_ci = es.eco_no COLLATE utf8mb4_unicode_ci AND es.in_latest_signoff = 1
+                LEFT JOIN eco_tracking et ON em.eco_no COLLATE utf8mb4_unicode_ci = et.eco_no COLLATE utf8mb4_unicode_ci
+                WHERE em.eco_no = ? AND COALESCE((SELECT ah.action FROM eco_archive_history ah WHERE ah.eco_no COLLATE utf8mb4_unicode_ci = em.eco_no COLLATE utf8mb4_unicode_ci ORDER BY ah.id DESC LIMIT 1), 'restore') <> 'archive'
                 LIMIT 1
             ";
             $stmt = $pdo->prepare($sql);
@@ -351,7 +353,7 @@ try {
 
             if (!$data) {
                 // Check if signoff-only record
-                $stmtSign = $pdo->prepare("SELECT es.* FROM eco_signoff es LEFT JOIN eco_master em ON em.eco_no = es.eco_no WHERE es.eco_no = ? AND em.archived_at IS NULL LIMIT 1");
+                $stmtSign = $pdo->prepare("SELECT es.* FROM eco_signoff es LEFT JOIN eco_master em ON em.eco_no COLLATE utf8mb4_unicode_ci = es.eco_no COLLATE utf8mb4_unicode_ci WHERE es.eco_no = ? AND COALESCE((SELECT ah.action FROM eco_archive_history ah WHERE ah.eco_no COLLATE utf8mb4_unicode_ci = em.eco_no COLLATE utf8mb4_unicode_ci ORDER BY ah.id DESC LIMIT 1), 'restore') <> 'archive' LIMIT 1");
                 $stmtSign->execute([$ecoNo]);
                 $signOnly = $stmtSign->fetch();
                 if ($signOnly) {
@@ -367,12 +369,12 @@ try {
          * 6. GET DASHBOARD SUMMARY (KPIS)
          * ------------------------------------------------------------- */
         case 'get_dashboard_summary':
-            $totalStmt = $pdo->query("SELECT COUNT(*) FROM eco_master WHERE archived_at IS NULL");
+            $totalStmt = $pdo->query("SELECT COUNT(*) FROM eco_master WHERE COALESCE((SELECT ah.action FROM eco_archive_history ah WHERE ah.eco_no COLLATE utf8mb4_unicode_ci = eco_master.eco_no COLLATE utf8mb4_unicode_ci ORDER BY ah.id DESC LIMIT 1), 'restore') <> 'archive'");
             $totalEco = (int)$totalStmt->fetchColumn();
 
             $agileOpen = 0;
             $agileClosed = 0;
-            $agileStatusStmt = $pdo->query("SELECT status FROM eco_master WHERE archived_at IS NULL");
+            $agileStatusStmt = $pdo->query("SELECT status FROM eco_master WHERE COALESCE((SELECT ah.action FROM eco_archive_history ah WHERE ah.eco_no COLLATE utf8mb4_unicode_ci = eco_master.eco_no COLLATE utf8mb4_unicode_ci ORDER BY ah.id DESC LIMIT 1), 'restore') <> 'archive'");
             while ($statusRow = $agileStatusStmt->fetch(PDO::FETCH_ASSOC)) {
                 if (ECOProcessor::statusToAgileStatus($statusRow['status'] ?? null) === 'Closed') {
                     $agileClosed++;
@@ -383,32 +385,32 @@ try {
 
             $pendingPmcStmt = $pdo->query("
                 SELECT COUNT(*) FROM eco_tracking
-                WHERE EXISTS (SELECT 1 FROM eco_master em WHERE em.eco_no = eco_tracking.eco_no AND em.archived_at IS NULL) AND (status_progress = 'Pending PMC' OR (pmc_result_completed = 0 AND qa_result_completed = 0)) ");
+                WHERE EXISTS (SELECT 1 FROM eco_master em WHERE em.eco_no COLLATE utf8mb4_unicode_ci = eco_tracking.eco_no COLLATE utf8mb4_unicode_ci AND COALESCE((SELECT ah.action FROM eco_archive_history ah WHERE ah.eco_no COLLATE utf8mb4_unicode_ci = em.eco_no COLLATE utf8mb4_unicode_ci ORDER BY ah.id DESC LIMIT 1), 'restore') <> 'archive') AND (status_progress = 'Pending PMC' OR (pmc_result_completed = 0 AND qa_result_completed = 0)) ");
             $pendingPmc = (int)$pendingPmcStmt->fetchColumn();
 
             $pendingQaStmt = $pdo->query("
                 SELECT COUNT(*) FROM eco_tracking
-                WHERE EXISTS (SELECT 1 FROM eco_master em WHERE em.eco_no = eco_tracking.eco_no AND em.archived_at IS NULL) AND (status_progress = 'Pending QA' OR (pmc_result_completed = 1 AND qa_result_completed = 0)) ");
+                WHERE EXISTS (SELECT 1 FROM eco_master em WHERE em.eco_no COLLATE utf8mb4_unicode_ci = eco_tracking.eco_no COLLATE utf8mb4_unicode_ci AND COALESCE((SELECT ah.action FROM eco_archive_history ah WHERE ah.eco_no COLLATE utf8mb4_unicode_ci = em.eco_no COLLATE utf8mb4_unicode_ci ORDER BY ah.id DESC LIMIT 1), 'restore') <> 'archive') AND (status_progress = 'Pending QA' OR (pmc_result_completed = 1 AND qa_result_completed = 0)) ");
             $pendingQa = (int)$pendingQaStmt->fetchColumn();
 
             $completedStmt = $pdo->query("
                 SELECT COUNT(*) FROM eco_tracking
-                WHERE EXISTS (SELECT 1 FROM eco_master em WHERE em.eco_no = eco_tracking.eco_no AND em.archived_at IS NULL) AND (status_progress = 'Completed' OR (pmc_result_completed = 1 AND qa_result_completed = 1)) ");
+                WHERE EXISTS (SELECT 1 FROM eco_master em WHERE em.eco_no COLLATE utf8mb4_unicode_ci = eco_tracking.eco_no COLLATE utf8mb4_unicode_ci AND COALESCE((SELECT ah.action FROM eco_archive_history ah WHERE ah.eco_no COLLATE utf8mb4_unicode_ci = em.eco_no COLLATE utf8mb4_unicode_ci ORDER BY ah.id DESC LIMIT 1), 'restore') <> 'archive') AND (status_progress = 'Completed' OR (pmc_result_completed = 1 AND qa_result_completed = 1)) ");
             $completed = (int)$completedStmt->fetchColumn();
 
             $overdueStmt = $pdo->query("
                 SELECT COUNT(*) FROM eco_tracking
-                WHERE EXISTS (SELECT 1 FROM eco_master em WHERE em.eco_no = eco_tracking.eco_no AND em.archived_at IS NULL) AND (due_date < CURDATE() AND status_progress != 'Completed') ");
+                WHERE EXISTS (SELECT 1 FROM eco_master em WHERE em.eco_no COLLATE utf8mb4_unicode_ci = eco_tracking.eco_no COLLATE utf8mb4_unicode_ci AND COALESCE((SELECT ah.action FROM eco_archive_history ah WHERE ah.eco_no COLLATE utf8mb4_unicode_ci = em.eco_no COLLATE utf8mb4_unicode_ci ORDER BY ah.id DESC LIMIT 1), 'restore') <> 'archive') AND (due_date < CURDATE() AND status_progress != 'Completed') ");
             $overdue = (int)$overdueStmt->fetchColumn();
 
             $statusChangedStmt = $pdo->query("
                 SELECT COUNT(*) FROM eco_signoff
-                WHERE EXISTS (SELECT 1 FROM eco_master em WHERE em.eco_no = eco_signoff.eco_no AND em.archived_at IS NULL) AND (status_changed = 1) ");
+                WHERE EXISTS (SELECT 1 FROM eco_master em WHERE em.eco_no COLLATE utf8mb4_unicode_ci = eco_signoff.eco_no COLLATE utf8mb4_unicode_ci AND COALESCE((SELECT ah.action FROM eco_archive_history ah WHERE ah.eco_no COLLATE utf8mb4_unicode_ci = em.eco_no COLLATE utf8mb4_unicode_ci ORDER BY ah.id DESC LIMIT 1), 'restore') <> 'archive') AND (status_changed = 1) ");
             $statusChanged = (int)$statusChangedStmt->fetchColumn();
 
             $unmatchedStmt = $pdo->query("
                 SELECT COUNT(*) FROM eco_signoff
-                WHERE EXISTS (SELECT 1 FROM eco_master em WHERE em.eco_no = eco_signoff.eco_no AND em.archived_at IS NULL) AND (is_unmatched = 1) ");
+                WHERE EXISTS (SELECT 1 FROM eco_master em WHERE em.eco_no COLLATE utf8mb4_unicode_ci = eco_signoff.eco_no COLLATE utf8mb4_unicode_ci AND COALESCE((SELECT ah.action FROM eco_archive_history ah WHERE ah.eco_no COLLATE utf8mb4_unicode_ci = em.eco_no COLLATE utf8mb4_unicode_ci ORDER BY ah.id DESC LIMIT 1), 'restore') <> 'archive') AND (is_unmatched = 1) ");
             $unmatched = (int)$unmatchedStmt->fetchColumn();
 
             jsonResponse([
@@ -433,10 +435,10 @@ try {
         case 'dismiss_status_change':
             $ecoNo = ECOProcessor::normalizeEcoNo($_POST['eco_no'] ?? $_GET['eco_no'] ?? '');
             if ($ecoNo === '' || $ecoNo === 'ALL') {
-                $pdo->exec("UPDATE eco_signoff es JOIN eco_master em ON em.eco_no = es.eco_no SET es.status_changed = 0 WHERE em.archived_at IS NULL");
+                $pdo->exec("UPDATE eco_signoff es JOIN eco_master em ON em.eco_no COLLATE utf8mb4_unicode_ci = es.eco_no COLLATE utf8mb4_unicode_ci SET es.status_changed = 0 WHERE COALESCE((SELECT ah.action FROM eco_archive_history ah WHERE ah.eco_no COLLATE utf8mb4_unicode_ci = em.eco_no COLLATE utf8mb4_unicode_ci ORDER BY ah.id DESC LIMIT 1), 'restore') <> 'archive'");
                 jsonResponse(['success' => true, 'message' => 'All status change highlights dismissed.']);
             } else {
-                $stmt = $pdo->prepare("UPDATE eco_signoff es JOIN eco_master em ON em.eco_no = es.eco_no SET es.status_changed = 0 WHERE es.eco_no = ? AND em.archived_at IS NULL");
+                $stmt = $pdo->prepare("UPDATE eco_signoff es JOIN eco_master em ON em.eco_no COLLATE utf8mb4_unicode_ci = es.eco_no COLLATE utf8mb4_unicode_ci SET es.status_changed = 0 WHERE es.eco_no = ? AND COALESCE((SELECT ah.action FROM eco_archive_history ah WHERE ah.eco_no COLLATE utf8mb4_unicode_ci = em.eco_no COLLATE utf8mb4_unicode_ci ORDER BY ah.id DESC LIMIT 1), 'restore') <> 'archive'");
                 $stmt->execute([$ecoNo]);
                 jsonResponse(['success' => true, 'eco_no' => $ecoNo, 'message' => 'Status change highlight dismissed.']);
             }

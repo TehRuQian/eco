@@ -81,9 +81,6 @@ class ECOProcessor
                         `ww` INT NULL,
                         `month` VARCHAR(20) NULL,
                         `created_at` DATETIME NULL,
-                        `archived_at` DATETIME NULL,
-                        `archived_by` VARCHAR(100) NULL,
-                        `archive_reason` TEXT NULL,
                         `updated_at` DATETIME NULL
                     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
                 ");
@@ -91,9 +88,6 @@ class ECOProcessor
             } catch (Throwable $e) {}
         } else {
             $requiredMaster = [
-                'archived_at' => 'DATETIME NULL',
-                'archived_by' => 'VARCHAR(100) NULL',
-                'archive_reason' => 'TEXT NULL',
                 'pmc_name' => 'TEXT NULL',
                 'pmc_email' => 'TEXT NULL',
                 'qa_name' => 'TEXT NULL',
@@ -239,6 +233,16 @@ class ECOProcessor
             performed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             INDEX idx_archive_history_eco (eco_no)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        // Preserve legacy state until the history-only migration removes these columns.
+        $legacyColumns = $getTableColumns('eco_master');
+        if (in_array('archived_at', $legacyColumns, true)) {
+            $actor = in_array('archived_by', $legacyColumns, true) ? "COALESCE(em.archived_by, 'User')" : "'User'";
+            $reason = in_array('archive_reason', $legacyColumns, true) ? "COALESCE(em.archive_reason, '')" : "''";
+            $pdo->exec("INSERT INTO eco_archive_history (eco_no, action, actor, reason, performed_at)
+                SELECT em.eco_no, 'archive', {$actor}, {$reason}, em.archived_at FROM eco_master em
+                WHERE em.archived_at IS NOT NULL
+                    AND NOT EXISTS (SELECT 1 FROM eco_archive_history ah WHERE ah.eco_no COLLATE utf8mb4_unicode_ci = em.eco_no COLLATE utf8mb4_unicode_ci)");
+        }
         self::applyCompletionDates($pdo);
         return ['success' => true, 'actions' => $actions];
     }
@@ -251,24 +255,24 @@ class ECOProcessor
                 (eco_no, internal_status, previous_internal_status, status_changed, status_changed_at, in_latest_signoff)
             SELECT em.eco_no, 'Complete', em.status, 1, NOW(), 0
             FROM eco_master em
-            LEFT JOIN eco_signoff es ON es.eco_no = em.eco_no
-            WHERE em.archived_at IS NULL AND em.completed_date IS NOT NULL
+            LEFT JOIN eco_signoff es ON es.eco_no COLLATE utf8mb4_unicode_ci = em.eco_no COLLATE utf8mb4_unicode_ci
+            WHERE COALESCE((SELECT ah.action FROM eco_archive_history ah WHERE ah.eco_no COLLATE utf8mb4_unicode_ci = em.eco_no COLLATE utf8mb4_unicode_ci ORDER BY ah.id DESC LIMIT 1), 'restore') <> 'archive' AND em.completed_date IS NOT NULL
                 AND es.eco_no IS NULL AND COALESCE(em.status, '') <> 'Complete'
             ON DUPLICATE KEY UPDATE eco_no = VALUES(eco_no)");
         $changed += $pdo->exec("UPDATE eco_signoff es
-            JOIN eco_master em ON em.eco_no = es.eco_no
+            JOIN eco_master em ON em.eco_no COLLATE utf8mb4_unicode_ci = es.eco_no COLLATE utf8mb4_unicode_ci
             SET es.previous_internal_status = COALESCE(es.internal_status, em.status),
                 es.internal_status = 'Complete', es.status_changed = 1, es.status_changed_at = NOW()
-            WHERE em.archived_at IS NULL AND em.completed_date IS NOT NULL
+            WHERE COALESCE((SELECT ah.action FROM eco_archive_history ah WHERE ah.eco_no COLLATE utf8mb4_unicode_ci = em.eco_no COLLATE utf8mb4_unicode_ci ORDER BY ah.id DESC LIMIT 1), 'restore') <> 'archive' AND em.completed_date IS NOT NULL
                 AND COALESCE(es.internal_status, '') <> 'Complete'");
         $pdo->exec("UPDATE eco_master SET status = 'Complete', status_in_agile = 'Closed'
-            WHERE archived_at IS NULL AND completed_date IS NOT NULL
+            WHERE COALESCE((SELECT ah.action FROM eco_archive_history ah WHERE ah.eco_no COLLATE utf8mb4_unicode_ci = eco_master.eco_no COLLATE utf8mb4_unicode_ci ORDER BY ah.id DESC LIMIT 1), 'restore') <> 'archive' AND completed_date IS NOT NULL
                 AND (COALESCE(status, '') <> 'Complete' OR COALESCE(status_in_agile, '') <> 'Closed')");
         $pdo->exec("UPDATE eco_tracking et
-            JOIN eco_master em ON em.eco_no = et.eco_no
+            JOIN eco_master em ON em.eco_no COLLATE utf8mb4_unicode_ci = et.eco_no COLLATE utf8mb4_unicode_ci
             SET et.pmc_result_completed = 1, et.qa_result_completed = 1,
                 et.status_progress = 'Completed'
-            WHERE em.archived_at IS NULL AND em.completed_date IS NOT NULL
+            WHERE COALESCE((SELECT ah.action FROM eco_archive_history ah WHERE ah.eco_no COLLATE utf8mb4_unicode_ci = em.eco_no COLLATE utf8mb4_unicode_ci ORDER BY ah.id DESC LIMIT 1), 'restore') <> 'archive' AND em.completed_date IS NOT NULL
                 AND (COALESCE(et.pmc_result_completed, 0) <> 1
                     OR COALESCE(et.qa_result_completed, 0) <> 1
                     OR COALESCE(et.status_progress, '') <> 'Completed')");
@@ -926,9 +930,9 @@ class ECOProcessor
                     $completionHistory = $this->pdo->prepare("INSERT INTO eco_signoff
                             (eco_no, internal_status, in_latest_signoff)
                         SELECT em.eco_no, em.status, 0 FROM eco_master em
-                        WHERE em.eco_no = ? AND em.archived_at IS NULL
+                        WHERE em.eco_no = ? AND COALESCE((SELECT ah.action FROM eco_archive_history ah WHERE ah.eco_no COLLATE utf8mb4_unicode_ci = em.eco_no COLLATE utf8mb4_unicode_ci ORDER BY ah.id DESC LIMIT 1), 'restore') <> 'archive'
                             AND COALESCE(em.status, '') <> 'Complete'
-                            AND NOT EXISTS (SELECT 1 FROM eco_signoff es WHERE es.eco_no = em.eco_no)
+                            AND NOT EXISTS (SELECT 1 FROM eco_signoff es WHERE es.eco_no COLLATE utf8mb4_unicode_ci = em.eco_no COLLATE utf8mb4_unicode_ci)
                         ON DUPLICATE KEY UPDATE eco_no = VALUES(eco_no)");
                     $completionHistory->execute([$ecoNo]);
                 }

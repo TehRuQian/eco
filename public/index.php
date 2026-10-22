@@ -105,8 +105,8 @@ if ($pdo) {
         $hasSignoffTbl  = !empty($signoffCols);
         $hasTrackingTbl = !empty($trackingCols);
 
-        $signoffJoin = $hasSignoffTbl ? "LEFT JOIN `eco_signoff` es ON em.eco_no = es.eco_no AND es.in_latest_signoff = 1" : "";
-        $trackingJoin = $hasTrackingTbl ? "LEFT JOIN `eco_tracking` et ON em.eco_no = et.eco_no" : "";
+        $signoffJoin = $hasSignoffTbl ? "LEFT JOIN `eco_signoff` es ON em.eco_no COLLATE utf8mb4_unicode_ci = es.eco_no COLLATE utf8mb4_unicode_ci AND es.in_latest_signoff = 1" : "";
+        $trackingJoin = $hasTrackingTbl ? "LEFT JOIN `eco_tracking` et ON em.eco_no COLLATE utf8mb4_unicode_ci = et.eco_no COLLATE utf8mb4_unicode_ci" : "";
 
         $orderBy = in_array('year', $masterCols, true) && in_array('ww', $masterCols, true)
             ? "ORDER BY em.year DESC, em.ww DESC, em.eco_no DESC"
@@ -153,7 +153,7 @@ if ($pdo) {
             FROM `eco_master` em
             {$signoffJoin}
             {$trackingJoin}
-            WHERE em.archived_at IS NULL
+            WHERE COALESCE((SELECT ah.action FROM eco_archive_history ah WHERE ah.eco_no COLLATE utf8mb4_unicode_ci = em.eco_no COLLATE utf8mb4_unicode_ci ORDER BY ah.id DESC LIMIT 1), 'restore') <> 'archive'
             {$orderBy}
         ";
 
@@ -202,7 +202,7 @@ if ($pdo) {
 
         // Also check signoff-only records count if table exists
         if ($hasSignoffTbl && in_array('is_unmatched', $signoffCols, true)) {
-            $stmtSignOnly = $pdo->query("SELECT COUNT(*) FROM `eco_signoff` es JOIN eco_master em ON em.eco_no = es.eco_no WHERE es.is_unmatched = 1 AND em.archived_at IS NULL");
+            $stmtSignOnly = $pdo->query("SELECT COUNT(*) FROM `eco_signoff` es JOIN eco_master em ON em.eco_no COLLATE utf8mb4_unicode_ci = es.eco_no COLLATE utf8mb4_unicode_ci WHERE es.is_unmatched = 1 AND COALESCE((SELECT ah.action FROM eco_archive_history ah WHERE ah.eco_no COLLATE utf8mb4_unicode_ci = em.eco_no COLLATE utf8mb4_unicode_ci ORDER BY ah.id DESC LIMIT 1), 'restore') <> 'archive'");
             $unmatchedSignoff = (int)$stmtSignOnly->fetchColumn();
         }
 

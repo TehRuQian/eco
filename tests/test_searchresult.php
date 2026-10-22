@@ -177,14 +177,13 @@ try {
         check($result['stats']['master_updated'], 1, "$extension existing ECO updated");
         check($db->master['ECO001'], $record, "$extension re-import updates all master fields");
         check($db->tracking, $tracking, "$extension manual tracking preserved");
-        $archiveMetadata = ['archived_at' => '2026-10-19 10:00:00', 'archived_by' => 'Test operator', 'archive_reason' => 'Incorrect import'];
-        $db->master['ECO001'] = array_merge($db->master['ECO001'], $archiveMetadata);
+        $db->writes = [];
         $result = $processor->processImport($file, 'SearchResult.' . $extension);
-        check($result['success'], true, "$extension archived ECO can be re-imported");
-        foreach ($archiveMetadata as $field => $expected) {
-            check($db->master['ECO001'][$field], $expected, "$extension re-import preserves $field");
-        }
-        check($db->tracking, $tracking, "$extension archived ECO tracking preserved");
+        check($result['success'], true, "$extension re-import works without master archive columns");
+        $historyWrites = array_filter($db->writes, static fn($sql) =>
+            preg_match('/^\s*(INSERT(?:\s+IGNORE)?\s+INTO|UPDATE|DELETE\s+FROM|TRUNCATE(?:\s+TABLE)?)\s+`?eco_archive_history`?\b/i', $sql));
+        check(count($historyWrites), 0, "$extension re-import does not change archive history");
+        check($db->tracking, $tracking, "$extension re-import preserves tracking");
     }
 
     $file = tempnam(sys_get_temp_dir(), 'eco_blank_');

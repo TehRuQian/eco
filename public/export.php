@@ -16,7 +16,7 @@ if (!$pdo) {
 }
 
 // Build query based on optional filters
-$where = ['em.archived_at IS NULL'];
+$where = ["COALESCE((SELECT ah.action FROM eco_archive_history ah WHERE ah.eco_no COLLATE utf8mb4_unicode_ci = em.eco_no COLLATE utf8mb4_unicode_ci ORDER BY ah.id DESC LIMIT 1), 'restore') <> 'archive'"];
 $params = [];
 
 // Search filter
@@ -123,8 +123,8 @@ $sql = "
         em.cut_in_date,
         em.completed_date
     FROM eco_master em
-    LEFT JOIN eco_signoff es ON em.eco_no = es.eco_no AND es.in_latest_signoff = 1
-    LEFT JOIN eco_tracking et ON em.eco_no = et.eco_no
+    LEFT JOIN eco_signoff es ON em.eco_no COLLATE utf8mb4_unicode_ci = es.eco_no COLLATE utf8mb4_unicode_ci AND es.in_latest_signoff = 1
+    LEFT JOIN eco_tracking et ON em.eco_no COLLATE utf8mb4_unicode_ci = et.eco_no COLLATE utf8mb4_unicode_ci
     {$whereClause}
     ORDER BY em.eco_no {$sortOrder}
 ";
